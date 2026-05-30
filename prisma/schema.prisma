@@ -68,33 +68,33 @@ enum LeadStatus {
 // ─── Tenant root ─────────────────────────────────────────────────────
 
 model Gym {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   name      String
   ownerName String
   phone     String
   address   String?
   logoUrl   String?
   // Localization defaults
-  locale    String   @default("az")
-  currency  String   @default("AZN")
+  locale    String  @default("az")
+  currency  String  @default("AZN")
 
   // WhatsApp message templates — null = use built-in Azerbaijani default
-  waReminderTemplate  String?
-  waReceiptTemplate   String?
-  waExpiringTemplate  String?
-  waWelcomeTemplate   String?
+  waReminderTemplate String?
+  waReceiptTemplate  String?
+  waExpiringTemplate String?
+  waWelcomeTemplate  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users        User[]
-  members      Member[]
-  payments     Payment[]
-  checkIns     CheckIn[]
-  audits       AuditLog[]
-  plans        PlanPrice[]
-  leads        Lead[]
-  visitorPasses VisitorPass[]
+  users          User[]
+  members        Member[]
+  payments       Payment[]
+  checkIns       CheckIn[]
+  audits         AuditLog[]
+  plans          PlanPrice[]
+  leads          Lead[]
+  visitorPasses  VisitorPass[]
   scannerDevices ScannerDevice[]
 }
 
@@ -107,7 +107,7 @@ model Lead {
   phone             String
   message           String?
   interest          PlanType?
-  source            String?    // "self_signup", "referral", "walkin", etc.
+  source            String? // "self_signup", "referral", "walkin", etc.
   status            LeadStatus @default(NEW)
   convertedAt       DateTime?
   convertedMemberId String?
@@ -161,6 +161,9 @@ model ScannerDevice {
   lastSeenAt       DateTime?
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())
+  // `updatedAt` is intentionally omitted — state transitions are tracked via
+  // `lastSeenAt` (use) and `revokedAt` (kill switch); a generic `updatedAt`
+  // would muddle the meaning of those columns.
 
   gym      Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
   checkIns CheckIn[]
@@ -279,11 +282,11 @@ model Payment {
 // ─── Check-ins ───────────────────────────────────────────────────────
 
 model CheckIn {
-  id            String        @id @default(cuid())
+  id              String        @id @default(cuid())
   // Exactly one of memberId / visitorPassId must be set (app-enforced).
-  memberId      String?
-  visitorPassId String?
-  gymId         String
+  memberId        String?
+  visitorPassId   String?
+  gymId           String
   scannedAt       DateTime      @default(now())
   scannedById     String?
   scannerDeviceId String?
