@@ -7,6 +7,8 @@ import { getOwnerDb } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { setDeviceCookie, hashDeviceToken } from "@/lib/device";
 
+const PAIRING_RACE = Symbol("pairing-race");
+
 const PAIRING_TTL_MS = 5 * 60 * 1000;
 
 export type PairingResult =
@@ -157,27 +159,42 @@ export async function redeemPairing(code: string): Promise<RedeemResult> {
   const token = crypto.randomBytes(32).toString("base64url");
   const tokenHash = hashDeviceToken(token);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.scannerDevice.update({
-      where: { id: device.id },
-      data: {
-        tokenHash,
-        pairingCode: null,
-        pairingExpiresAt: null,
-        lastSeenAt: new Date(),
-      },
+  try {
+    await prisma.$transaction(async (tx) => {
+      // `updateMany` with the `tokenHash: null` filter is the race guard:
+      // if a concurrent redeem already paired this row, count will be 0
+      // and we abort the transaction. (Plain `update`'s where is a unique
+      // input that doesn't accept `null` directly; updateMany takes a full
+      // filter and is still atomic on a single row.)
+      const updated = await tx.scannerDevice.updateMany({
+        where: { id: device.id, tokenHash: null },
+        data: {
+          tokenHash,
+          pairingCode: null,
+          pairingExpiresAt: null,
+          lastSeenAt: new Date(),
+        },
+      });
+      if (updated.count === 0) {
+        throw PAIRING_RACE;
+      }
+      await tx.auditLog.create({
+        data: {
+          gymId: device.gymId,
+          actorId: null, // phone is unauthenticated at this point
+          action: "device.paired",
+          entityType: "ScannerDevice",
+          entityId: device.id,
+          payload: { name: device.name },
+        },
+      });
     });
-    await tx.auditLog.create({
-      data: {
-        gymId: device.gymId,
-        actorId: null, // phone is unauthenticated at this point
-        action: "device.paired",
-        entityType: "ScannerDevice",
-        entityId: device.id,
-        payload: { name: device.name },
-      },
-    });
-  });
+  } catch (e) {
+    if (e === PAIRING_RACE) {
+      return { ok: false, message: "Kod artıq istifadə olunub" };
+    }
+    throw e;
+  }
 
   await setDeviceCookie(token);
   return { ok: true, gymName: device.gym.name };
