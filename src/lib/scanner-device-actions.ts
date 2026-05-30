@@ -4,6 +4,8 @@ import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getOwnerDb } from "@/lib/dal";
+import { prisma } from "@/lib/prisma";
+import { setDeviceCookie, hashDeviceToken } from "@/lib/device";
 
 const PAIRING_TTL_MS = 5 * 60 * 1000;
 
@@ -118,4 +120,65 @@ export async function revokeScannerDevice(
 
   revalidatePath("/settings");
   return { ok: true };
+}
+
+export type RedeemResult =
+  | { ok: true; gymName: string }
+  | { ok: false; message: string };
+
+// Public action — no auth. Called by /door/pair/[code]. Validates the code,
+// mints a long-lived opaque token, stores sha256(token) on the device row,
+// sets the gympass_scanner_device cookie on the phone, returns ok.
+export async function redeemPairing(code: string): Promise<RedeemResult> {
+  if (!code || code.length < 8 || code.length > 32) {
+    return { ok: false, message: "Kod düzgün deyil" };
+  }
+
+  const device = await prisma.scannerDevice.findUnique({
+    where: { pairingCode: code },
+    select: {
+      id: true,
+      gymId: true,
+      name: true,
+      tokenHash: true,
+      pairingExpiresAt: true,
+      revokedAt: true,
+      gym: { select: { name: true } },
+    },
+  });
+
+  if (!device) return { ok: false, message: "Kod tapılmadı" };
+  if (device.revokedAt) return { ok: false, message: "Cihaz ləğv edilib" };
+  if (device.tokenHash) return { ok: false, message: "Kod artıq istifadə olunub" };
+  if (!device.pairingExpiresAt || device.pairingExpiresAt.getTime() < Date.now()) {
+    return { ok: false, message: "Kodun vaxtı keçib" };
+  }
+
+  const token = crypto.randomBytes(32).toString("base64url");
+  const tokenHash = hashDeviceToken(token);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.scannerDevice.update({
+      where: { id: device.id },
+      data: {
+        tokenHash,
+        pairingCode: null,
+        pairingExpiresAt: null,
+        lastSeenAt: new Date(),
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        gymId: device.gymId,
+        actorId: null, // phone is unauthenticated at this point
+        action: "device.paired",
+        entityType: "ScannerDevice",
+        entityId: device.id,
+        payload: { name: device.name },
+      },
+    });
+  });
+
+  await setDeviceCookie(token);
+  return { ok: true, gymName: device.gym.name };
 }
