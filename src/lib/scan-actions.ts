@@ -230,9 +230,9 @@ export async function overrideScan(memberId: string, note: string) {
 
   const checkIn = await db.checkIn.create({
     data: {
-      gymId: user.gymId,
+      gymId: actorGymId(actor),
       memberId: member.id,
-      scannedById: user.id,
+      ...attribution(actor),
       result: "GRANTED",
       override: true,
       overrideNote: note || null,
