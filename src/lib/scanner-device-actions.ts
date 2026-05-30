@@ -3,7 +3,6 @@
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { getOwnerDb } from "@/lib/dal";
 
 const PAIRING_TTL_MS = 5 * 60 * 1000;
@@ -98,9 +97,11 @@ export async function revokeScannerDevice(
   if (!device) return { ok: false, message: "Cihaz tapılmadı" };
   if (device.revokedAt) return { ok: true };
 
-  await prisma.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     await tx.scannerDevice.update({
       where: { id: deviceId },
+      // Clear both credentials so neither the long-lived token nor any
+      // outstanding pairing code can be used to re-authenticate post-revoke.
       data: { revokedAt: new Date(), tokenHash: null, pairingCode: null },
     });
     await tx.auditLog.create({
