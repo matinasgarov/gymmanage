@@ -1,0 +1,342 @@
+// GymPass database schema
+// See GYMPASS_PRD.md for product requirements.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────
+
+enum UserRole {
+  OWNER
+  STAFF
+}
+
+enum PlanType {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum MemberStatus {
+  ACTIVE
+  OVERDUE
+  FROZEN
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum CheckInResult {
+  GRANTED
+  DENIED
+}
+
+enum CancelReason {
+  MOVED
+  PRICE
+  INJURY
+  LOST_MOTIVATION
+  POOR_SERVICE
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  LOST
+}
+
+// ─── Tenant root ─────────────────────────────────────────────────────
+
+model Gym {
+  id        String   @id @default(cuid())
+  name      String
+  ownerName String
+  phone     String
+  address   String?
+  logoUrl   String?
+  // Localization defaults
+  locale    String   @default("az")
+  currency  String   @default("AZN")
+
+  // WhatsApp message templates — null = use built-in Azerbaijani default
+  waReminderTemplate  String?
+  waReceiptTemplate   String?
+  waExpiringTemplate  String?
+  waWelcomeTemplate   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  members      Member[]
+  payments     Payment[]
+  checkIns     CheckIn[]
+  audits       AuditLog[]
+  plans        PlanPrice[]
+  leads        Lead[]
+  visitorPasses VisitorPass[]
+  scannerDevices ScannerDevice[]
+}
+
+// ─── Leads ───────────────────────────────────────────────────────────
+
+model Lead {
+  id                String     @id @default(cuid())
+  gymId             String
+  name              String
+  phone             String
+  message           String?
+  interest          PlanType?
+  source            String?    // "self_signup", "referral", "walkin", etc.
+  status            LeadStatus @default(NEW)
+  convertedAt       DateTime?
+  convertedMemberId String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@index([gymId, status])
+  @@index([gymId, createdAt])
+}
+
+// ─── Visitor passes (walk-ins / day-passes) ──────────────────────────
+
+model VisitorPass {
+  id           String        @id @default(cuid())
+  gymId        String
+  name         String?
+  phone        String?
+  amount       Decimal       @db.Decimal(10, 2)
+  method       PaymentMethod
+  // Null for instant "Quick visit" entries.
+  // Set for day-pass-with-QR; visitor scans this token until expiresAt.
+  token        String?       @unique
+  expiresAt    DateTime
+  recordedById String?
+  createdAt    DateTime      @default(now())
+
+  gym        Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  recordedBy User?     @relation("VisitorPassRecordedBy", fields: [recordedById], references: [id])
+  checkIns   CheckIn[]
+
+  @@index([gymId, createdAt])
+}
+
+// ─── Scanner devices (paired phones) ─────────────────────────────────
+// A phone paired from the dashboard. Holds a hashed long-lived token.
+// The raw token only ever exists in the phone's `gympass_scanner_device`
+// cookie. Revoking is `revokedAt = now()`.
+
+model ScannerDevice {
+  id               String    @id @default(cuid())
+  gymId            String
+  name             String
+  // sha256(token) — set after the phone redeems the pairing code.
+  // Nullable while the device is in "awaiting pairing" state.
+  tokenHash        String?   @unique
+  // One-time pairing code (URL-safe). Cleared once redeemed.
+  pairingCode      String?   @unique
+  pairingExpiresAt DateTime?
+  lastSeenAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  gym      Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  checkIns CheckIn[]
+
+  @@index([gymId, revokedAt])
+}
+
+// Configurable plan pricing per gym (so price changes don't mutate existing members)
+model PlanPrice {
+  id        String   @id @default(cuid())
+  gymId     String
+  planType  PlanType
+  price     Decimal  @db.Decimal(10, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@unique([gymId, planType, active])
+  @@index([gymId])
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  gymId        String
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(STAFF)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  gym                   Gym           @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  paymentsCreated       Payment[]     @relation("PaymentRecordedBy")
+  checkInsScanned       CheckIn[]     @relation("CheckInScannedBy")
+  auditsActed           AuditLog[]    @relation("AuditActor")
+  visitorPassesRecorded VisitorPass[] @relation("VisitorPassRecordedBy")
+
+  @@index([gymId])
+}
+
+// ─── Members ─────────────────────────────────────────────────────────
+
+model Member {
+  id         String       @id @default(cuid())
+  gymId      String
+  // Human-friendly identifier shown in UI (e.g. M-00123). Unique per gym.
+  publicId   String
+  name       String
+  phone      String
+  email      String?
+  photoUrl   String?
+  planType   PlanType
+  // Snapshot of price at signup; not mutated when gym changes PlanPrice
+  planPrice  Decimal      @db.Decimal(10, 2)
+  startDate  DateTime     @db.Date
+  // Computed expiry; recalculated on freeze/renewal
+  expiryDate DateTime     @db.Date
+  status     MemberStatus @default(ACTIVE)
+  notes      String?
+
+  // Set when status transitions to CANCELLED
+  cancelledAt  DateTime?
+  cancelReason CancelReason?
+  cancelNote   String?
+
+  // QR auth: secret used to sign rotating QR codes. Never displayed; only
+  // hashes of signed (secret + timestamp) values appear in member-shown QRs.
+  qrSecret String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gym      Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  payments Payment[]
+  checkIns CheckIn[]
+  freezes  Freeze[]
+
+  @@unique([gymId, publicId])
+  @@index([gymId, status])
+  @@index([gymId, expiryDate])
+  @@index([phone])
+}
+
+// ─── Payments ────────────────────────────────────────────────────────
+
+model Payment {
+  id           String         @id @default(cuid())
+  memberId     String
+  gymId        String
+  amount       Decimal        @db.Decimal(10, 2)
+  // Period this payment covers, e.g. "2026-05" for May 2026
+  period       String
+  dueDate      DateTime       @db.Date
+  paidAt       DateTime?
+  method       PaymentMethod?
+  status       PaymentStatus  @default(PENDING)
+  recordedById String?
+  // Optional uploaded transfer-screenshot URL
+  receiptUrl   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  member     Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  gym        Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  recordedBy User?  @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+
+  @@unique([memberId, period])
+  @@index([gymId, status])
+  @@index([gymId, dueDate])
+}
+
+// ─── Check-ins ───────────────────────────────────────────────────────
+
+model CheckIn {
+  id            String        @id @default(cuid())
+  // Exactly one of memberId / visitorPassId must be set (app-enforced).
+  memberId      String?
+  visitorPassId String?
+  gymId         String
+  scannedAt       DateTime      @default(now())
+  scannedById     String?
+  scannerDeviceId String?
+  result          CheckInResult
+  deniedReason    String?
+  // True if a staff member overrode a denial
+  override        Boolean       @default(false)
+  overrideNote    String?
+
+  member        Member?        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  visitorPass   VisitorPass?   @relation(fields: [visitorPassId], references: [id], onDelete: Cascade)
+  gym           Gym            @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  scannedBy     User?          @relation("CheckInScannedBy", fields: [scannedById], references: [id])
+  scannerDevice ScannerDevice? @relation(fields: [scannerDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([gymId, scannedAt])
+  @@index([memberId, scannedAt])
+  @@index([visitorPassId])
+}
+
+// ─── Freezes ─────────────────────────────────────────────────────────
+
+model Freeze {
+  id        String   @id @default(cuid())
+  memberId  String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+// ─── Audit log (append-only) ─────────────────────────────────────────
+// Every payment mutation, member status change, override, etc. writes
+// one row here. Never updated, never deleted.
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  gymId      String
+  actorId    String?
+  action     String // e.g. "payment.mark_paid", "member.freeze", "checkin.override"
+  entityType String // e.g. "Payment", "Member"
+  entityId   String
+  // Free-form JSON of before/after or relevant context
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  gym   Gym   @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([gymId, createdAt])
+  @@index([entityType, entityId])
+}
