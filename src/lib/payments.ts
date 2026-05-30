@@ -1,0 +1,92 @@
+import "server-only";
+import { prisma } from "@/lib/prisma";
+import type { PlanType } from "@/generated/prisma/enums";
+
+const PLAN_DAYS: Record<PlanType, number> = {
+  MONTHLY: 30,
+  QUARTERLY: 90,
+  ANNUAL: 365,
+};
+
+// Days after dueDate before a pending payment is considered overdue.
+const OVERDUE_GRACE_DAYS = 5;
+
+const AZ_MONTHS = [
+  "Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun",
+  "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
+];
+
+export function periodKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatPeriodLabel(periodStart: Date, plan: PlanType): string {
+  const end = new Date(periodStart);
+  end.setUTCDate(end.getUTCDate() + PLAN_DAYS[plan] - 1);
+  if (plan === "MONTHLY") {
+    return `${AZ_MONTHS[periodStart.getUTCMonth()]} ${periodStart.getUTCFullYear()}`;
+  }
+  return `${periodStart.getUTCDate()} ${AZ_MONTHS[periodStart.getUTCMonth()]} – ${end.getUTCDate()} ${AZ_MONTHS[end.getUTCMonth()]} ${end.getUTCFullYear()}`;
+}
+
+// All period start dates from start to today (inclusive), for a plan.
+export function periodsThrough(start: Date, plan: PlanType, now = new Date()): Date[] {
+  const days = PLAN_DAYS[plan];
+  const out: Date[] = [];
+  const cursor = new Date(Date.UTC(
+    start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()
+  ));
+  const today = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()
+  ));
+  while (cursor.getTime() <= today.getTime()) {
+    out.push(new Date(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + days);
+  }
+  return out;
+}
+
+// Idempotent: create pending payment rows for every elapsed period.
+export async function ensurePendingPayments(memberId: string) {
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      id: true, gymId: true, startDate: true,
+      planType: true, planPrice: true,
+    },
+  });
+  if (!member) return;
+
+  const periods = periodsThrough(member.startDate, member.planType);
+  if (periods.length === 0) return;
+
+  const existing = await prisma.payment.findMany({
+    where: { memberId: member.id, period: { in: periods.map(periodKey) } },
+    select: { period: true },
+  });
+  const have = new Set(existing.map((p: { period: string }) => p.period));
+  const missing = periods.filter((d) => !have.has(periodKey(d)));
+  if (missing.length === 0) return;
+
+  await prisma.payment.createMany({
+    data: missing.map((d) => ({
+      memberId: member.id,
+      gymId: member.gymId,
+      amount: member.planPrice,
+      period: periodKey(d),
+      dueDate: d,
+      status: "PENDING" as const,
+    })),
+    skipDuplicates: true,
+  });
+}
+
+export function computeEffectiveStatus(
+  payment: { status: string; dueDate: Date; paidAt: Date | null }
+): "PAID" | "PENDING" | "OVERDUE" {
+  if (payment.status === "PAID" || payment.paidAt) return "PAID";
+  const cutoff = new Date(payment.dueDate);
+  cutoff.setUTCDate(cutoff.getUTCDate() + OVERDUE_GRACE_DAYS);
+  if (new Date().getTime() > cutoff.getTime()) return "OVERDUE";
+  return "PENDING";
+}

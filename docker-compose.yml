@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gympass-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gympass
+      POSTGRES_PASSWORD: gympass_dev
+      POSTGRES_DB: gympass
+    ports:
+      - "5432:5432"
+    volumes:
+      - gympass-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gympass -d gympass"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  gympass-pgdata:
