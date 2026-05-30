@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { forGym } from "@/lib/tenant";
@@ -72,7 +73,6 @@ export async function getDeviceDb() {
     // re-reading; readDevice returns null for both. Send unauthenticated
     // devices to /door/pair — revoked devices end up there too, which is fine
     // (they re-pair). For an explicit revoked message, callers can branch.
-    const { redirect } = await import("next/navigation");
     return redirect("/door/pair");
   }
   return { device, db: forGym(device.gymId) };
