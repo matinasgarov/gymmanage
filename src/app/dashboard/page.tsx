@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, TrendingUp, PieChart, TrendingDown, Inbox } from "lucide-react";
+import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, TrendingUp, PieChart, TrendingDown, Inbox, HeartPulse } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
@@ -47,6 +47,28 @@ export default async function DashboardPage() {
               </div>
               <div className="text-xs text-[var(--muted)]">
                 Sizinlə əlaqə saxlanmasını gözləyirlər.
+              </div>
+            </div>
+            <span className="text-[var(--brand-strong)] text-sm">→</span>
+          </Link>
+        )}
+
+        {data.atRisk.ghosters + data.atRisk.lapsers > 0 && (
+          <Link
+            href="/retention"
+            className="card p-4 flex items-center gap-3 hover:bg-[var(--brand-soft)]/40 border-[var(--brand)]/40 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center">
+              <HeartPulse className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">
+                {data.atRisk.ghosters + data.atRisk.lapsers} üzv risk altında
+              </div>
+              <div className="text-xs text-[var(--muted)] truncate">
+                {data.atRisk.sample.length > 0
+                  ? data.atRisk.sample.join(", ")
+                  : "Gəlməyən və üzvlüyü bitən üzvlər"}
               </div>
             </div>
             <span className="text-[var(--brand-strong)] text-sm">→</span>

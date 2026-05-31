@@ -2,6 +2,8 @@ import "server-only";
 import { forGym } from "@/lib/tenant";
 import { PLAN_LABEL } from "@/lib/labels";
 import { toCents, centsToNumber } from "@/lib/money";
+import { getAtRiskCounts } from "@/lib/retention";
+import { getAtRiskCounts } from "@/lib/retention";
 
 const AZ_MONTHS_SHORT = [
   "Yan", "Fev", "Mar", "Apr", "May", "İyn",
@@ -137,9 +139,10 @@ export async function getDashboard(gymId: string) {
   });
   const visitorRevenueCents = toCents(visitorRevenueRow._sum.amount);
 
-  const newLeadsCount = await db.lead.count({
-    where: { status: "NEW" },
-  });
+  const [newLeadsCount, atRisk] = await Promise.all([
+    db.lead.count({ where: { status: "NEW" } }),
+    getAtRiskCounts(gymId),
+  ]);
 
   // Aggregate revenue by plan + visitor pseudo-plan, exact integer cents.
   const planCents: Record<string, number> = { MONTHLY: 0, QUARTERLY: 0, ANNUAL: 0 };
@@ -194,6 +197,7 @@ export async function getDashboard(gymId: string) {
     cancelledThisMonth,
     activeAtMonthStart,
     newLeadsCount,
+    atRisk,
   };
 }
 
