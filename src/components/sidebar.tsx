@@ -17,6 +17,7 @@ import {
   Inbox,
   UserCheck,
   Activity,
+  HeartPulse,
 } from "lucide-react";
 import { logout } from "@/lib/auth-actions";
 
@@ -61,6 +62,13 @@ const ITEMS: NavItem[] = [
     ownerOnly: true,
   },
   { href: "/reminders", label: "Xatırlatmalar", icon: Megaphone, ownerOnly: true },
+  {
+    href: "/retention",
+    label: "Geri qaytarma",
+    icon: HeartPulse,
+    match: (p) => p.startsWith("/retention"),
+    ownerOnly: true,
+  },
   {
     href: "/attendance",
     label: "Davamiyyət",
