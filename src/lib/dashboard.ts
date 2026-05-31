@@ -3,7 +3,6 @@ import { forGym } from "@/lib/tenant";
 import { PLAN_LABEL } from "@/lib/labels";
 import { toCents, centsToNumber } from "@/lib/money";
 import { getAtRiskCounts } from "@/lib/retention";
-import { getAtRiskCounts } from "@/lib/retention";
 
 const AZ_MONTHS_SHORT = [
   "Yan", "Fev", "Mar", "Apr", "May", "İyn",
