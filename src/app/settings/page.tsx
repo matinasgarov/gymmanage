@@ -7,6 +7,7 @@ import { ProfileForm } from "@/components/settings/profile-form";
 import { LogoForm } from "@/components/settings/logo-form";
 import { TemplatesForm } from "@/components/settings/templates-form";
 import { ScannerDevicesCard } from "@/components/scanner-devices-card";
+import { StaffCard } from "@/components/settings/staff-card";
 
 export default async function SettingsPage() {
   const user = await requireOwner();
@@ -51,6 +52,13 @@ export default async function SettingsPage() {
 
         <Section title="Skanerlər">
           <ScannerDevicesCard />
+        </Section>
+
+        <Section title="İşçilər">
+          <p className="text-xs text-[var(--muted)] mb-3">
+            İşçi əlavə edin — onlara email ilə hesab aktivləşdirmə linki göndəriləcək.
+          </p>
+          <StaffCard gymId={gym.id} />
         </Section>
 
         <Section title="WhatsApp mesaj şablonları">
