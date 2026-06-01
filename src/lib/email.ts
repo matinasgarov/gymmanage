@@ -27,7 +27,13 @@ async function send(to: string, subject: string, html: string) {
     return;
   }
   try {
-    await resend.emails.send({ from: FROM, to, subject, html });
+    // The Resend SDK does NOT throw on API errors (e.g. unverified `from`
+    // domain) — it returns `{ data, error }`. Inspect `error` explicitly so
+    // failures are visible instead of silently swallowed.
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    if (error) {
+      console.error(`[email] send to ${to} rejected by Resend:`, error);
+    }
   } catch (err) {
     // A failed email must not blow up the server action — the token row exists
     // and the owner/user can retry. Log and move on.

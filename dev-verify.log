@@ -1,0 +1,15 @@
+
+> gymmanage@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.104:3000
+- Environments: .env
+✓ Ready in 499ms
+
+ GET /login 200 in 1185ms (next.js: 697ms, application-code: 488ms)
+ GET /settings 200 in 1659ms (next.js: 470ms, application-code: 1188ms)
+ GET /forgot-password 200 in 73ms (next.js: 25ms, application-code: 48ms)
+ POST /forgot-password 200 in 1127ms (next.js: 5ms, application-code: 1122ms)
+  └─ ƒ requestPasswordReset(undefined, {}) in 1094ms src/lib/auth-actions.ts

@@ -271,6 +271,41 @@ export async function setStaffActive(staffId: string, active: boolean) {
   revalidatePath("/settings");
 }
 
+// Owner-only. Permanently delete a staff account. The where-filter (gymId +
+// role:"STAFF") is the guard: an owner can only delete their own gym's staff,
+// never another owner nor themselves. Type-to-confirm is re-validated here so
+// the guard is not merely client-side. Optional FKs on Payment/CheckIn/AuditLog/
+// VisitorPass are SET NULL on delete, so historical rows survive (unattributed);
+// PasswordResetToken rows cascade away.
+export async function deleteStaff(staffId: string, formData: FormData) {
+  const { user: owner } = await getOwnerDb();
+  const typed = String(formData.get("confirmName") ?? "").trim();
+
+  const staff = await prisma.user.findFirst({
+    where: { id: staffId, gymId: owner.gymId, role: "STAFF" },
+  });
+  if (!staff) return;
+  if (typed !== staff.name) return;
+
+  await prisma.$transaction(async (tx: Tx) => {
+    // Snapshot before the row vanishes — AuditLog references users by nullable
+    // actorId, so this row survives (its actorId is the owner, not the deletee).
+    await tx.auditLog.create({
+      data: {
+        gymId: owner.gymId,
+        actorId: owner.id,
+        action: "staff.delete",
+        entityType: "User",
+        entityId: staffId,
+        payload: { name: staff.name, email: staff.email },
+      },
+    });
+    await tx.user.delete({ where: { id: staffId } });
+  });
+
+  revalidatePath("/settings");
+}
+
 // Public. Validates an INVITE token, sets the password, activates the account.
 export async function acceptInvite(
   rawToken: string,

@@ -13,6 +13,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "checkin.override": "Giriş icazəsi (override)",
   "reminder.sent": "WhatsApp xatırlatması göndərildi",
   "reminder.skip": "Xatırlatma atlandı",
+  "staff.delete": "İşçi silindi",
 };
 
 export type AuditPayload = Record<string, unknown> | null;
