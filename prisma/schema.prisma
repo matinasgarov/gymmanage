@@ -65,6 +65,11 @@ enum LeadStatus {
   LOST
 }
 
+enum TokenKind {
+  RESET
+  INVITE
+}
+
 // ─── Tenant root ─────────────────────────────────────────────────────
 
 model Gym {
@@ -199,13 +204,28 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  gym                   Gym           @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  paymentsCreated       Payment[]     @relation("PaymentRecordedBy")
-  checkInsScanned       CheckIn[]     @relation("CheckInScannedBy")
-  auditsActed           AuditLog[]    @relation("AuditActor")
-  visitorPassesRecorded VisitorPass[] @relation("VisitorPassRecordedBy")
+  gym                   Gym                  @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  paymentsCreated       Payment[]            @relation("PaymentRecordedBy")
+  checkInsScanned       CheckIn[]            @relation("CheckInScannedBy")
+  auditsActed           AuditLog[]           @relation("AuditActor")
+  visitorPassesRecorded VisitorPass[]        @relation("VisitorPassRecordedBy")
+  resetTokens           PasswordResetToken[]
 
   @@index([gymId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // sha256(rawToken) — raw token never stored
+  kind      TokenKind
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ─── Members ─────────────────────────────────────────────────────────
