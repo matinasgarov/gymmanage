@@ -7,6 +7,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "member.freeze": "Üzvlük donduruldu",
   "member.cancel": "Üzvlük ləğv edildi",
   "member.reactivate": "Üzvlük aktivləşdirildi",
+  "member.delete": "Üzv silindi",
   "payment.mark_paid": "Ödəniş qeydə alındı",
   "payment.unmark": "Ödəniş geri alındı",
   "checkin.override": "Giriş icazəsi (override)",

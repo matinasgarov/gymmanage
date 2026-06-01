@@ -18,6 +18,7 @@ import {
 } from "@/lib/payments";
 import { markPaymentPaid, unmarkPayment } from "@/lib/payment-actions";
 import { CancelDialog } from "@/components/cancel-dialog";
+import { DeleteMemberDialog } from "@/components/delete-member-dialog";
 import { PhotoUpload } from "@/components/photo-upload";
 import { buildWaUrl, pickTemplate, renderTemplate } from "@/lib/templates";
 import {
@@ -264,7 +265,7 @@ export default async function MemberDetailPage({
           </section>
         )}
 
-        <section className="flex gap-2 pt-2">
+        <section className="flex items-center gap-2 pt-2">
           {member.status !== "CANCELLED" ? (
             <CancelDialog memberId={member.id} />
           ) : (
@@ -274,6 +275,9 @@ export default async function MemberDetailPage({
               </button>
             </form>
           )}
+          <div className="ml-auto">
+            <DeleteMemberDialog memberId={member.id} memberName={member.name} />
+          </div>
         </section>
       </div>
     </AppShell>

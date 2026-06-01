@@ -274,6 +274,46 @@ export async function cancelMember(memberId: string, formData: FormData) {
   revalidatePath(`/members/${memberId}`);
 }
 
+export async function deleteMember(memberId: string, formData: FormData) {
+  const { user, db } = await getOwnerDb();
+
+  const typed = String(formData.get("confirmName") ?? "").trim();
+
+  const member = await db.member.findFirst({
+    where: { id: memberId },
+  });
+  if (!member) return;
+  // Defense in depth: the dialog disables submit until the name matches, but
+  // re-verify here so the typed-name guard is not merely client-side.
+  if (typed !== member.name) return;
+
+  await db.$transaction(async (tx) => {
+    // Snapshot the member BEFORE deleting — the row is about to vanish, and
+    // AuditLog references members by string id (no FK), so it survives.
+    await tx.auditLog.create({
+      data: {
+        gymId: user.gymId,
+        actorId: user.id,
+        action: "member.delete",
+        entityType: "Member",
+        entityId: memberId,
+        payload: {
+          publicId: member.publicId,
+          name: member.name,
+          phone: member.phone,
+          planType: member.planType,
+          status: member.status,
+        },
+      },
+    });
+    // Cascades to Payment, CheckIn, Freeze (all onDelete: Cascade in schema).
+    await tx.member.delete({ where: { id: memberId } });
+  });
+
+  revalidatePath("/members");
+  redirect("/members");
+}
+
 export async function reactivateMember(memberId: string) {
   const { user, db } = await getOwnerDb();
   await db.member.update({
