@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { login, type FormState } from "@/lib/auth-actions";
 
 const initial: FormState = undefined;
@@ -38,6 +39,11 @@ export function LoginForm() {
         {state?.errors?.password?.[0] && (
           <p className="text-xs text-red-600 mt-1">{state.errors.password[0]}</p>
         )}
+      </div>
+      <div className="text-right -mt-2">
+        <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">
+          Şifrəni unutdunuz?
+        </Link>
       </div>
       {state?.message && (
         <p className="text-sm text-red-600">{state.message}</p>
