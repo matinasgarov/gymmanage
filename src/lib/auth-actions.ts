@@ -3,7 +3,6 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { prisma, type Tx } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/session";
 import { signupSchema, loginSchema } from "@/lib/validators";
@@ -12,11 +11,12 @@ import { sendResetEmail, sendInviteEmail } from "@/lib/email";
 import { getOwnerDb } from "@/lib/dal";
 import { revalidatePath } from "next/cache";
 
-async function getOrigin(): Promise<string> {
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
+// Canonical origin for out-of-band links (password reset / staff invite). These
+// links are emailed, so the origin MUST come from server-controlled config — never
+// the request Host header, which an attacker can forge to poison the reset link
+// (CWE-640). Set NEXTAUTH_URL to the canonical https URL in production.
+function getOrigin(): string {
+  return (process.env.NEXTAUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
 
 export type FormState = {
@@ -156,7 +156,7 @@ export async function requestPasswordReset(
         expiresAt: makeExpiry(RESET_TTL_HOURS),
       },
     });
-    const origin = await getOrigin();
+    const origin = getOrigin();
     await sendResetEmail(email, `${origin}/reset-password?token=${raw}`);
   }
 
@@ -245,7 +245,7 @@ export async function inviteStaff(
     });
   });
 
-  const origin = await getOrigin();
+  const origin = getOrigin();
   await sendInviteEmail(email, name, `${origin}/accept-invite?token=${raw}`);
 
   revalidatePath("/settings");
