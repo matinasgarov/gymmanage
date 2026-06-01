@@ -7,8 +7,10 @@ import { headers } from "next/headers";
 import { prisma, type Tx } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/session";
 import { signupSchema, loginSchema } from "@/lib/validators";
-import { generateToken, hashToken, makeExpiry, RESET_TTL_HOURS } from "@/lib/tokens";
-import { sendResetEmail } from "@/lib/email";
+import { generateToken, hashToken, makeExpiry, RESET_TTL_HOURS, INVITE_TTL_HOURS } from "@/lib/tokens";
+import { sendResetEmail, sendInviteEmail } from "@/lib/email";
+import { getOwnerDb } from "@/lib/dal";
+import { revalidatePath } from "next/cache";
 
 async function getOrigin(): Promise<string> {
   const h = await headers();
@@ -32,6 +34,11 @@ const newPasswordSchema = z.object({
     .min(8, "Şifrə ən az 8 simvol olmalıdır")
     .regex(/[a-zA-Z]/, "Şifrədə hərf olmalıdır")
     .regex(/[0-9]/, "Şifrədə rəqəm olmalıdır"),
+});
+
+const inviteStaffSchema = z.object({
+  name: z.string().min(2, "Ad ən az 2 simvol olmalıdır").trim(),
+  email: z.email("Düzgün email daxil edin").trim().toLowerCase(),
 });
 
 export async function signup(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -180,6 +187,105 @@ export async function resetPassword(
     await tx.user.update({
       where: { id: token.userId },
       data: { passwordHash },
+    });
+    await tx.passwordResetToken.update({
+      where: { id: token.id },
+      data: { usedAt: new Date() },
+    });
+  });
+
+  await createSession({
+    userId: token.user.id,
+    gymId: token.user.gymId,
+    role: token.user.role,
+  });
+  redirect(token.user.role === "STAFF" ? "/scan" : "/dashboard");
+}
+
+// Owner-only. Creates an inactive STAFF user + INVITE token, emails the link.
+export async function inviteStaff(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const { user: owner } = await getOwnerDb();
+
+  const parsed = inviteStaffSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+  });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+  const { name, email } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return { errors: { email: ["Bu email artıq istifadə olunur"] } };
+  }
+
+  const raw = generateToken();
+  await prisma.$transaction(async (tx: Tx) => {
+    const staff = await tx.user.create({
+      data: {
+        gymId: owner.gymId,
+        email,
+        name,
+        role: "STAFF",
+        active: false,
+        passwordHash: "", // placeholder until invite accepted
+      },
+    });
+    await tx.passwordResetToken.create({
+      data: {
+        userId: staff.id,
+        tokenHash: hashToken(raw),
+        kind: "INVITE",
+        expiresAt: makeExpiry(INVITE_TTL_HOURS),
+      },
+    });
+  });
+
+  const origin = await getOrigin();
+  await sendInviteEmail(email, name, `${origin}/accept-invite?token=${raw}`);
+
+  revalidatePath("/settings");
+  return { message: `${name} dəvət olundu` };
+}
+
+// Owner-only. Toggle a staff member's active flag. Scoped to the owner's gym.
+export async function setStaffActive(staffId: string, active: boolean) {
+  const { user: owner } = await getOwnerDb();
+  await prisma.user.updateMany({
+    where: { id: staffId, gymId: owner.gymId, role: "STAFF" },
+    data: { active },
+  });
+  revalidatePath("/settings");
+}
+
+// Public. Validates an INVITE token, sets the password, activates the account.
+export async function acceptInvite(
+  rawToken: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const parsed = newPasswordSchema.safeParse({ password: formData.get("password") });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const token = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash: hashToken(rawToken) },
+    include: { user: true },
+  });
+  if (!token || token.kind !== "INVITE" || token.usedAt || token.expiresAt < new Date()) {
+    return { message: "Dəvət linki etibarsız və ya vaxtı keçib." };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  await prisma.$transaction(async (tx: Tx) => {
+    await tx.user.update({
+      where: { id: token.userId },
+      data: { passwordHash, active: true },
     });
     await tx.passwordResetToken.update({
       where: { id: token.id },
