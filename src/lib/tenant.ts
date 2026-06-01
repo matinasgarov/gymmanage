@@ -19,7 +19,14 @@ const TENANT_MODELS = new Set<string>([
 //  - User:   the auth anchor; looked up by id/email via the raw client
 //  - Freeze: scoped transitively through its `member` (it has no `gymId` column,
 //            so injecting one would be an "Unknown argument" error)
-const NON_TENANT_MODELS = new Set<string>(["Gym", "User", "Freeze"]);
+//  - PasswordResetToken: scoped transitively through its `user` (no `gymId`
+//            column); only ever read/written via the raw client in auth flows.
+const NON_TENANT_MODELS = new Set<string>([
+  "Gym",
+  "User",
+  "Freeze",
+  "PasswordResetToken",
+]);
 
 // Completeness guard (fail-closed): every model in the schema must be consciously
 // classified. If a model is added later and left unclassified, this throws at
