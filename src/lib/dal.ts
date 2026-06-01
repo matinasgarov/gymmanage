@@ -20,6 +20,7 @@ export const getCurrentUser = cache(async () => {
       email: true,
       name: true,
       role: true,
+      active: true,
       gymId: true,
       gym: {
         select: {
@@ -39,7 +40,10 @@ export const getCurrentUser = cache(async () => {
       },
     },
   });
-  if (!user || !user.gymId) redirect("/login");
+  // Re-check `active` on every request: deactivating a user (setStaffActive)
+  // must revoke their live session, not just block future logins — the session
+  // JWT is otherwise trusted for its full 7-day life.
+  if (!user || !user.gymId || !user.active) redirect("/login");
   return user;
 });
 

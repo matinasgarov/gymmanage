@@ -178,7 +178,16 @@ export async function resetPassword(
     where: { tokenHash: hashToken(rawToken) },
     include: { user: true },
   });
-  if (!token || token.kind !== "RESET" || token.usedAt || token.expiresAt < new Date()) {
+  if (
+    !token ||
+    token.kind !== "RESET" ||
+    token.usedAt ||
+    token.expiresAt < new Date() ||
+    !token.user.active
+  ) {
+    // Reject resets for deactivated users — a token minted while active must
+    // not let a since-deactivated account back in. (acceptInvite intentionally
+    // does NOT check this: its job is to activate an invited, inactive user.)
     return { message: "Link etibarsız və ya vaxtı keçib." };
   }
 
