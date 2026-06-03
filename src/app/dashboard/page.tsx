@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, PieChart, TrendingDown, Inbox, HeartPulse } from "lucide-react";
+import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, Target, TrendingDown, Inbox, HeartPulse } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
@@ -155,15 +155,10 @@ export default async function DashboardPage() {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-3">
-              <PieChart className="w-4 h-4 text-[var(--brand-strong)]" />
-              <h2 className="font-medium">Bu ay plan üzrə gəlir</h2>
+              <Target className="w-4 h-4 text-[var(--brand-strong)]" />
+              <h2 className="font-medium">Aylıq gəlir hədəfi</h2>
             </div>
             <MonthlyGoalProgress goal={data.monthlyGoal} current={data.monthRevenue} />
-            {data.revenueByPlan.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">Bu ay ödəniş qeydə alınmayıb.</p>
-            ) : (
-              <PlanRevenueBars rows={data.revenueByPlan} total={data.monthRevenue} />
-            )}
           </div>
 
           <div className="card p-5">
@@ -218,45 +213,6 @@ export default async function DashboardPage() {
         </section>
       </div>
     </AppShell>
-  );
-}
-
-function PlanRevenueBars({
-  rows,
-  total,
-}: {
-  rows: { plan: string; label: string; total: number }[];
-  total: number;
-}) {
-  const colors: Record<string, string> = {
-    MONTHLY: "bg-teal-500",
-    QUARTERLY: "bg-indigo-500",
-    ANNUAL: "bg-amber-500",
-    VISITOR: "bg-emerald-500",
-  };
-  const safe = total || 1;
-  return (
-    <ul className="space-y-2.5">
-      {rows.map((r) => {
-        const pct = Math.min(100, (r.total / safe) * 100);
-        return (
-          <li key={r.plan}>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-medium">{r.label}</span>
-              <span className="text-[var(--muted)]">
-                {r.total.toFixed(2)} ₼ · {pct.toFixed(0)}%
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div
-                className={`h-full ${colors[r.plan] ?? "bg-slate-500"}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 

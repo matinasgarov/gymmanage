@@ -39,7 +39,7 @@ export function MonthlyGoalProgress({
   const reached = goal != null && goal > 0 && current >= goal;
 
   return (
-    <div className="mb-4 border-b border-[var(--border)] pb-4">
+    <div>
       {goal == null ? (
         <button
           type="button"
@@ -58,8 +58,7 @@ export function MonthlyGoalProgress({
         >
           <div className="mb-1 flex items-center justify-between text-xs">
             <span className="flex items-center gap-1.5 font-medium">
-              <Target className="h-3.5 w-3.5 text-[var(--brand-strong)]" />
-              Aylıq hədəf
+              Bu ay
               <Pencil className="h-3 w-3 text-[var(--muted)] opacity-0 transition-opacity group-hover:opacity-100" />
             </span>
             <span className="text-[var(--muted)]">
