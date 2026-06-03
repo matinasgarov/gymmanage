@@ -44,3 +44,9 @@ next-env.d.ts
 
 # Uploaded member photos — never commit user data
 /public/uploads/
+
+# Local verification scripts / logs / screenshots (not part of the app)
+verify-*.mjs
+trigger-*.mjs
+verify-*.png
+dev-*.log
