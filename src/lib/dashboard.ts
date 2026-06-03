@@ -32,7 +32,8 @@ export async function getDashboard(gymId: string) {
   const overdueCutoff = addDays(todayStart, -OVERDUE_GRACE_DAYS);
 
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+  // Fetch a full year of buckets; the chart slices to the selected range (3/6/12).
+  const twelveMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
 
   const [
     activeCount,
@@ -96,7 +97,7 @@ export async function getDashboard(gymId: string) {
     db.payment.findMany({
       where: {
         status: "PAID",
-        paidAt: { gte: sixMonthsAgo },
+        paidAt: { gte: twelveMonthsAgo },
       },
       select: { amount: true, paidAt: true },
     }),
@@ -131,12 +132,16 @@ export async function getDashboard(gymId: string) {
     }),
   ]);
 
-  // Visitor revenue this month (walk-ins + day-passes)
-  const visitorRevenueRow = await db.visitorPass.aggregate({
-    where: { createdAt: { gte: monthStart } },
-    _sum: { amount: true },
+  // Visitor passes over the last year (walk-ins + day-passes) — used both for the
+  // current-month headline and to fold walk-in revenue into the monthly chart.
+  const visitorPasses = await db.visitorPass.findMany({
+    where: { createdAt: { gte: twelveMonthsAgo } },
+    select: { amount: true, createdAt: true },
   });
-  const visitorRevenueCents = toCents(visitorRevenueRow._sum.amount);
+  let visitorRevenueCents = 0;
+  for (const v of visitorPasses) {
+    if (v.createdAt >= monthStart) visitorRevenueCents += toCents(v.amount);
+  }
 
   const [newLeadsCount, atRisk] = await Promise.all([
     db.lead.count({ where: { status: "NEW" } }),
@@ -161,9 +166,9 @@ export async function getDashboard(gymId: string) {
     ? (cancelledThisMonth / activeAtMonthStart) * 100
     : 0;
 
-  // Build 6-month bucket (cents)
+  // Build 12-month buckets (cents) — member payments + visitor passes.
   const buckets: { label: string; cents: number; year: number; month: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
+  for (let i = 11; i >= 0; i--) {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     buckets.push({
       label: AZ_MONTHS_SHORT[d.getUTCMonth()],
@@ -174,10 +179,17 @@ export async function getDashboard(gymId: string) {
   }
   for (const p of revenuePayments) {
     if (!p.paidAt) continue;
-    const y = p.paidAt.getUTCFullYear();
-    const m = p.paidAt.getUTCMonth();
-    const b = buckets.find((x) => x.year === y && x.month === m);
+    const paidAt = p.paidAt;
+    const b = buckets.find(
+      (x) => x.year === paidAt.getUTCFullYear() && x.month === paidAt.getUTCMonth()
+    );
     if (b) b.cents += toCents(p.amount);
+  }
+  for (const v of visitorPasses) {
+    const b = buckets.find(
+      (x) => x.year === v.createdAt.getUTCFullYear() && x.month === v.createdAt.getUTCMonth()
+    );
+    if (b) b.cents += toCents(v.amount);
   }
 
   const monthRevenueCents = toCents(monthRevenueRow._sum.amount) + visitorRevenueCents;

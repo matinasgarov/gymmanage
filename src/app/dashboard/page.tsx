@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, TrendingUp, PieChart, TrendingDown, Inbox, HeartPulse } from "lucide-react";
+import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, PieChart, TrendingDown, Inbox, HeartPulse } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
@@ -105,13 +105,6 @@ export default async function DashboardPage() {
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="card p-5 lg:col-span-2">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[var(--brand-strong)]" />
-                <h2 className="font-medium">6 aylıq gəlir</h2>
-              </div>
-              <span className="text-lg font-semibold">{formatAZN(data.monthRevenue)}</span>
-            </div>
             <RevenueChart data={data.revenueByMonth} />
           </div>
 
