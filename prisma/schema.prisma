@@ -83,6 +83,9 @@ model Gym {
   locale    String  @default("az")
   currency  String  @default("AZN")
 
+  // Standing monthly revenue target (null = no goal set). Progress resets each month.
+  monthlyRevenueGoal Decimal? @db.Decimal(10, 2)
+
   // WhatsApp message templates — null = use built-in Azerbaijani default
   waReminderTemplate String?
   waReceiptTemplate  String?

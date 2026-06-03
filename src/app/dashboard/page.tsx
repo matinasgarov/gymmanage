@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { getDashboard, waReminderUrl } from "@/lib/dashboard";
 import { formatAZN } from "@/lib/members";
 import { RevenueChart } from "@/components/revenue-chart";
+import { MonthlyGoalProgress } from "@/components/monthly-goal-progress";
 
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -157,6 +158,7 @@ export default async function DashboardPage() {
               <PieChart className="w-4 h-4 text-[var(--brand-strong)]" />
               <h2 className="font-medium">Bu ay plan üzrə gəlir</h2>
             </div>
+            <MonthlyGoalProgress goal={data.monthlyGoal} current={data.monthRevenue} />
             {data.revenueByPlan.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">Bu ay ödəniş qeydə alınmayıb.</p>
             ) : (

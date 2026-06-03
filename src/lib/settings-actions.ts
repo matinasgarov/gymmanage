@@ -24,6 +24,40 @@ export type SettingsState =
   | { ok?: true; errors?: Record<string, string[]>; message?: string }
   | undefined;
 
+// Empty string clears the goal (null); otherwise a non-negative amount.
+const goalSchema = z.object({
+  goal: z
+    .union([
+      z.literal(""),
+      z.coerce
+        .number()
+        .min(0, "Hədəf mənfi ola bilməz")
+        .max(99_999_999, "Hədəf çox böyükdür"),
+    ])
+    .transform((v) => (v === "" ? null : v)),
+});
+
+// Owner-only. Sets (or clears, with an empty value) the gym's standing monthly
+// revenue goal. Stored on the gym; progress is computed per month on the dashboard.
+export async function setMonthlyGoal(
+  _prev: SettingsState,
+  formData: FormData
+): Promise<SettingsState> {
+  const user = await requireOwner();
+  const parsed = goalSchema.safeParse({ goal: formData.get("goal") ?? "" });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  await prisma.gym.update({
+    where: { id: user.gymId },
+    data: { monthlyRevenueGoal: parsed.data.goal },
+  });
+
+  revalidatePath("/dashboard");
+  return { ok: true, message: "Hədəf yeniləndi" };
+}
+
 export async function updateGymProfile(
   _prev: SettingsState,
   formData: FormData

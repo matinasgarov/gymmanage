@@ -143,10 +143,15 @@ export async function getDashboard(gymId: string) {
     if (v.createdAt >= monthStart) visitorRevenueCents += toCents(v.amount);
   }
 
-  const [newLeadsCount, atRisk] = await Promise.all([
+  const [newLeadsCount, atRisk, gymRow] = await Promise.all([
     db.lead.count({ where: { status: "NEW" } }),
     getAtRiskCounts(gymId),
+    db.gym.findUnique({ where: { id: gymId }, select: { monthlyRevenueGoal: true } }),
   ]);
+  const monthlyGoal =
+    gymRow?.monthlyRevenueGoal != null
+      ? centsToNumber(toCents(gymRow.monthlyRevenueGoal))
+      : null;
 
   // Aggregate revenue by plan + visitor pseudo-plan, exact integer cents.
   const planCents: Record<string, number> = { MONTHLY: 0, QUARTERLY: 0, ANNUAL: 0 };
@@ -202,6 +207,7 @@ export async function getDashboard(gymId: string) {
     expiringMembers,
     todayCheckIns,
     monthRevenue: centsToNumber(monthRevenueCents),
+    monthlyGoal,
     revenueByMonth: buckets.map((b) => ({ label: b.label, total: centsToNumber(b.cents) })),
     revenueByPlan,
     churnRate,
