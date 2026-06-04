@@ -260,6 +260,13 @@ model Member {
   // hashes of signed (secret + timestamp) values appear in member-shown QRs.
   qrSecret String @unique
 
+  // Device binding for the pass page: sha256 of the device token held in the
+  // bound phone's httpOnly cookie. Only this device can mint rotating scan
+  // tokens; opening the pass elsewhere requires an explicit (logged) transfer.
+  // Null = not yet bound (next device to open the pass claims it).
+  passDeviceHash String?
+  passBoundAt    DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

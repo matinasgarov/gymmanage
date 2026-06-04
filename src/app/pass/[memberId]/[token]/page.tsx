@@ -1,13 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import {
-  signScanToken,
-  verifyPassUrlToken,
-  buildScanUrl,
-} from "@/lib/qr";
+import { verifyPassUrlToken } from "@/lib/qr";
 import { formatAZN } from "@/lib/members";
 import { RotatingQR } from "@/components/rotating-qr";
-import { headers } from "next/headers";
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: "Aktiv",
@@ -48,16 +43,6 @@ export default async function MemberPassPage({
   if (!member) notFound();
   if (!verifyPassUrlToken(member.id, member.qrSecret, token)) notFound();
 
-  const fresh = signScanToken(member.id, member.qrSecret);
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
-  const initial = {
-    scanUrl: buildScanUrl(fresh.token, origin),
-    expiresAt: fresh.expiresAt,
-  };
-
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-neutral-100">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4">
@@ -80,11 +65,7 @@ export default async function MemberPassPage({
         </div>
 
         <div className="flex justify-center">
-          <RotatingQR
-            memberId={member.id}
-            urlToken={token}
-            initial={initial}
-          />
+          <RotatingQR memberId={member.id} urlToken={token} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">

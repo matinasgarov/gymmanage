@@ -14,6 +14,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "reminder.sent": "WhatsApp xatırlatması göndərildi",
   "reminder.skip": "Xatırlatma atlandı",
   "staff.delete": "İşçi silindi",
+  "pass.device_transfer": "Üzv kartı başqa cihaza keçirildi",
 };
 
 export type AuditPayload = Record<string, unknown> | null;

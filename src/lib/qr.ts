@@ -80,6 +80,18 @@ export function verifyScanToken(
   return ok ? { ok: true, memberId: parsed.memberId } : { ok: false, reason: "invalid" };
 }
 
+// ─── Pass device binding ─────────────────────────────────────────────
+// A random opaque token lives in the bound phone's httpOnly cookie; only its
+// sha256 is stored on the member. Mirrors the ScannerDevice token pattern.
+
+export function newPassDeviceToken(): string {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+export function hashPassDevice(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
 export function buildScanUrl(token: string, origin: string): string {
   return `${origin}/scan-verify?t=${encodeURIComponent(token)}`;
 }
