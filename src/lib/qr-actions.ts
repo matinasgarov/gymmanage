@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import {
@@ -43,7 +44,24 @@ async function setPassDeviceCookie(memberId: string, token: string) {
 export type ScanTokenResult =
   | { status: "ok"; scanUrl: string; expiresAt: number }
   | { status: "needs_transfer" }
+  | { status: "wrong_code" }
+  | { status: "rate_limited" }
   | { status: "invalid" };
+
+// Phone-verify transfer throttle: this many wrong codes locks transfer…
+const MAX_TRANSFER_FAILS = 5;
+// …for this long.
+const TRANSFER_LOCK_MS = 15 * 60 * 1000;
+
+// Last 4 digits of a stored phone, ignoring spaces/+/dashes.
+function phoneLast4(phone: string): string {
+  return (phone.match(/\d/g) ?? []).join("").slice(-4);
+}
+
+function digitsEqual(a: string, b: string): boolean {
+  if (a.length !== b.length || a.length === 0) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 async function issueScan(member: {
   id: string;
@@ -94,27 +112,72 @@ export async function requestScanToken(
   return { status: "needs_transfer" };
 }
 
-// Public. Explicitly move the pass binding to the current device (overwrites the
-// previous one, so the old phone immediately stops minting tokens). Logged so an
-// owner can spot a member who transfers constantly — the signature of a shared link.
+// Public. Move the pass binding to the current device — but only after the
+// caller proves they are the member by entering the last 4 digits of the phone
+// on file. A forwarded link alone does not carry that knowledge, so a casual
+// share cannot claim the QR. Overwrites the previous binding (the old phone
+// immediately stops minting tokens) and is logged so an owner can spot a member
+// who transfers constantly. Brute-force throttled: MAX_TRANSFER_FAILS wrong
+// codes locks transfer for TRANSFER_LOCK_MS.
 export async function transferPassDevice(
   memberId: string,
-  urlToken: string
+  urlToken: string,
+  code: string
 ): Promise<ScanTokenResult> {
   const member = await prisma.member.findUnique({
     where: { id: memberId },
-    select: { id: true, gymId: true, qrSecret: true },
+    select: {
+      id: true,
+      gymId: true,
+      qrSecret: true,
+      phone: true,
+      passTransferFails: true,
+      passTransferLockedUntil: true,
+    },
   });
   if (!member) return { status: "invalid" };
   if (!verifyPassUrlToken(member.id, member.qrSecret, urlToken)) {
     return { status: "invalid" };
   }
 
+  // Throttle: respect an active lock; clear an expired one before comparing.
+  const now = Date.now();
+  if (member.passTransferLockedUntil != null) {
+    if (member.passTransferLockedUntil.getTime() > now) {
+      return { status: "rate_limited" };
+    }
+    await prisma.member.update({
+      where: { id: member.id },
+      data: { passTransferFails: 0, passTransferLockedUntil: null },
+    });
+    member.passTransferFails = 0;
+  }
+
+  // Wrong code → count the failure, lock once the ceiling is hit.
+  if (!digitsEqual((code.match(/\d/g) ?? []).join(""), phoneLast4(member.phone))) {
+    const fails = member.passTransferFails + 1;
+    const locked = fails >= MAX_TRANSFER_FAILS;
+    await prisma.member.update({
+      where: { id: member.id },
+      data: {
+        passTransferFails: fails,
+        passTransferLockedUntil: locked ? new Date(now + TRANSFER_LOCK_MS) : null,
+      },
+    });
+    return { status: locked ? "rate_limited" : "wrong_code" };
+  }
+
+  // Correct code → rebind, reset throttle, log, issue a fresh scan token.
   const deviceToken = newPassDeviceToken();
   await prisma.$transaction(async (tx) => {
     await tx.member.update({
       where: { id: member.id },
-      data: { passDeviceHash: hashPassDevice(deviceToken), passBoundAt: new Date() },
+      data: {
+        passDeviceHash: hashPassDevice(deviceToken),
+        passBoundAt: new Date(),
+        passTransferFails: 0,
+        passTransferLockedUntil: null,
+      },
     });
     await tx.auditLog.create({
       data: {

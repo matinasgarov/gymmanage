@@ -8,15 +8,19 @@ import {
   type ScanTokenResult,
 } from "@/lib/qr-actions";
 
+type TransferError = "wrong" | "rate";
+
 type View =
   | { kind: "loading" }
   | { kind: "ok"; scanUrl: string; expiresAt: number }
-  | { kind: "needs_transfer" }
+  | { kind: "transfer"; error?: TransferError }
   | { kind: "invalid" };
 
 function toView(r: ScanTokenResult): View {
   if (r.status === "ok") return { kind: "ok", scanUrl: r.scanUrl, expiresAt: r.expiresAt };
-  if (r.status === "needs_transfer") return { kind: "needs_transfer" };
+  if (r.status === "needs_transfer") return { kind: "transfer" };
+  if (r.status === "wrong_code") return { kind: "transfer", error: "wrong" };
+  if (r.status === "rate_limited") return { kind: "transfer", error: "rate" };
   return { kind: "invalid" };
 }
 
@@ -27,8 +31,9 @@ export function RotatingQR(props: {
 }) {
   const { memberId, urlToken } = props;
   const [view, setView] = useState<View>({ kind: "loading" });
+  const [code, setCode] = useState("");
   const [now, setNow] = useState(() => Date.now());
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
 
   const refresh = useCallback(() => {
     startTransition(async () => {
@@ -37,12 +42,16 @@ export function RotatingQR(props: {
     });
   }, [memberId, urlToken]);
 
-  const transfer = useCallback(() => {
-    startTransition(async () => {
-      const r = await transferPassDevice(memberId, urlToken);
-      setView(toView(r));
-    });
-  }, [memberId, urlToken]);
+  const transfer = useCallback(
+    (digits: string) => {
+      startTransition(async () => {
+        const r = await transferPassDevice(memberId, urlToken, digits);
+        if (r.status === "ok") setCode("");
+        setView(toView(r));
+      });
+    },
+    [memberId, urlToken]
+  );
 
   // Initial fetch on mount.
   useEffect(() => {
@@ -80,25 +89,47 @@ export function RotatingQR(props: {
     );
   }
 
-  if (view.kind === "needs_transfer") {
+  if (view.kind === "transfer") {
+    const locked = view.error === "rate";
+    const canSubmit = code.length === 4 && !pending && !locked;
     return (
-      <div className="flex flex-col items-center gap-3 text-center" style={{ width: props.size ?? 240 }}>
-        <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed border-neutral-300 px-4">
-          <p className="text-sm text-neutral-600">
-            Bu kart başqa cihazda aktivdir. QR kodu burada göstərmək üçün kartı bu cihaza keçirin.
-          </p>
-        </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSubmit) transfer(code);
+        }}
+        className="flex flex-col items-center gap-3 text-center"
+        style={{ width: props.size ?? 240 }}
+      >
+        <p className="text-sm text-neutral-600">
+          Kartı bu telefonda açmaq üçün telefon nömrənizin son 4 rəqəmini daxil edin.
+        </p>
+        <input
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={4}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="••••"
+          className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-center text-2xl tracking-[0.5em] tabular-nums"
+        />
+        {view.error === "wrong" && (
+          <p className="text-xs text-red-600">Rəqəmlər uyğun gəlmir.</p>
+        )}
+        {locked && (
+          <p className="text-xs text-red-600">Çox cəhd. Bir azdan yenidən yoxlayın.</p>
+        )}
         <button
-          type="button"
-          onClick={transfer}
-          className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
+          type="submit"
+          disabled={!canSubmit}
+          className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
-          Bu cihaza keçir
+          {pending ? "Yoxlanılır…" : "Təsdiqlə"}
         </button>
         <p className="text-[11px] text-neutral-400">
-          Keçirdikdən sonra digər cihazda QR işləməyəcək.
+          Təsdiqlədikdən sonra digər telefonda QR işləməyəcək.
         </p>
-      </div>
+      </form>
     );
   }
 

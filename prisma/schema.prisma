@@ -262,10 +262,16 @@ model Member {
 
   // Device binding for the pass page: sha256 of the device token held in the
   // bound phone's httpOnly cookie. Only this device can mint rotating scan
-  // tokens; opening the pass elsewhere requires an explicit (logged) transfer.
-  // Null = not yet bound (next device to open the pass claims it).
+  // tokens; opening the pass elsewhere requires a phone-verified (logged)
+  // transfer. Null = not yet bound (next device to open the pass claims it).
   passDeviceHash String?
   passBoundAt    DateTime?
+
+  // Brute-force throttle for the phone-verify transfer step (last 4 digits of
+  // the phone, 10k space). 5 wrong tries → locked until `passTransferLockedUntil`.
+  // Both reset on a successful transfer or once the lock window passes.
+  passTransferFails       Int       @default(0)
+  passTransferLockedUntil DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

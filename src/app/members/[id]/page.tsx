@@ -53,6 +53,23 @@ export default async function MemberDetailPage({
 
   if (!member) notFound();
 
+  // Passive anti-sharing signal: how often this pass has been moved to a new
+  // device (each transfer is phone-verified + logged). Derived from audit rows.
+  const transferWhere = {
+    action: "pass.device_transfer",
+    entityType: "Member",
+    entityId: member.id,
+  };
+  const transferCount = await db.auditLog.count({ where: transferWhere });
+  const lastTransfer =
+    transferCount > 0
+      ? await db.auditLog.findFirst({
+          where: transferWhere,
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        })
+      : null;
+
   const freezeAction = freezeMember.bind(null, member.id);
   const reactivateAction = reactivateMember.bind(null, member.id);
   const today = new Date().toISOString().slice(0, 10);
@@ -138,6 +155,14 @@ export default async function MemberDetailPage({
             </a>
           </div>
           <code className="block text-[11px] text-[var(--muted)] break-all mt-3">{passUrl}</code>
+          {transferCount > 0 && (
+            <p
+              className={`text-[11px] mt-2 ${transferCount >= 5 ? "text-amber-600" : "text-[var(--muted)]"}`}
+            >
+              Kart {transferCount} dəfə köçürülüb
+              {lastTransfer ? ` · son: ${fmtDate(lastTransfer.createdAt)}` : ""}
+            </p>
+          )}
         </section>
 
         <section className="card p-5">
