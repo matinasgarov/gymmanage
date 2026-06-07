@@ -19,9 +19,10 @@ enum UserRole {
 }
 
 enum PlanType {
-  MONTHLY
-  QUARTERLY
-  ANNUAL
+  TWELVE_ENTRIES
+  MONTHLY_UNLIMITED
+  THREE_MONTHS
+  YEARLY
 }
 
 enum MemberStatus {
@@ -272,6 +273,15 @@ model Member {
   // Both reset on a successful transfer or once the lock window passes.
   passTransferFails       Int       @default(0)
   passTransferLockedUntil DateTime?
+
+  // When true, the member may check in more than once per calendar day.
+  // Default false: scanner denies a second GRANTED scan on the same day.
+  unlimitedEntries Boolean @default(false)
+
+  // Optional cap on GRANTED entries per billing cycle (the member's current
+  // period from startDate). null = no cap. e.g. 12 = a "12 entries/month" tier.
+  // Orthogonal to unlimitedEntries (which governs the once-per-day gate).
+  monthlyEntryLimit Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

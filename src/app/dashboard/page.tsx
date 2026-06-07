@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, AlertTriangle, CalendarClock, ScanLine, Target, TrendingDown, Inbox, HeartPulse } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  AlertTriangle,
+  CalendarClock,
+  TrendingDown,
+  Inbox,
+  HeartPulse,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
@@ -19,6 +27,10 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const data = await getDashboard(user.gymId);
 
+  const atRiskCount = data.atRisk.ghosters + data.atRisk.lapsers;
+  const churnSignal: Signal =
+    data.churnRate >= 10 ? "danger" : data.churnRate >= 5 ? "warn" : "neutral";
+
   return (
     <AppShell>
       <PageHeader
@@ -34,85 +46,116 @@ export default async function DashboardPage() {
       />
 
       <div className="px-4 lg:px-8 py-6 space-y-6">
-        {data.newLeadsCount > 0 && (
-          <Link
-            href="/leads?status=NEW"
-            className="card p-4 flex items-center gap-3 hover:bg-[var(--brand-soft)]/40 border-[var(--brand)]/40 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center">
-              <Inbox className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">
+        {/* TIER 1 — alerts. Slim pills, only when something needs attention. */}
+        {(data.newLeadsCount > 0 || atRiskCount > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {data.newLeadsCount > 0 && (
+              <Link
+                href="/leads?status=NEW"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] px-3.5 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+              >
+                <Inbox className="w-4 h-4" />
                 {data.newLeadsCount} yeni müraciət
-              </div>
-              <div className="text-xs text-[var(--muted)]">
-                Sizinlə əlaqə saxlanmasını gözləyirlər.
-              </div>
-            </div>
-            <span className="text-[var(--brand-strong)] text-sm">→</span>
-          </Link>
+                <span aria-hidden>→</span>
+              </Link>
+            )}
+            {atRiskCount > 0 && (
+              <Link
+                href="/retention"
+                className="inline-flex items-center gap-2 rounded-full bg-red-50 text-[var(--signal-danger)] px-3.5 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+              >
+                <HeartPulse className="w-4 h-4" />
+                {atRiskCount} üzv risk altında
+                <span aria-hidden>→</span>
+              </Link>
+            )}
+          </div>
         )}
 
-        {data.atRisk.ghosters + data.atRisk.lapsers > 0 && (
-          <Link
-            href="/retention"
-            className="card p-4 flex items-center gap-3 hover:bg-[var(--brand-soft)]/40 border-[var(--brand)]/40 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center">
-              <HeartPulse className="w-5 h-5" />
+        {/* TIER 2 — hero band. The two numbers that matter; Z-start = check-ins top-left. */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="card p-5 flex flex-col">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wide text-[var(--muted)]">
+                Bu gün giriş
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+                <span className="pulse-dot" />
+                canlı
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">
-                {data.atRisk.ghosters + data.atRisk.lapsers} üzv risk altında
-              </div>
-              <div className="text-xs text-[var(--muted)] truncate">
-                {data.atRisk.sample.length > 0
-                  ? data.atRisk.sample.join(", ")
-                  : "Gəlməyən və üzvlüyü bitən üzvlər"}
-              </div>
+            <div className="mt-2 flex-1 flex items-end">
+              {data.todayCheckIns > 0 ? (
+                <div className="text-5xl font-semibold tracking-tight leading-none">
+                  {data.todayCheckIns}
+                </div>
+              ) : (
+                <div className="text-lg text-[var(--muted)] py-3">Hələ giriş yoxdur</div>
+              )}
             </div>
-            <span className="text-[var(--brand-strong)] text-sm">→</span>
-          </Link>
-        )}
+            <Link
+              href="/scan"
+              className="mt-4 inline-flex items-center gap-1 text-sm text-[var(--brand-strong)] transition-all hover:gap-2"
+            >
+              Skanerə keç <span aria-hidden>→</span>
+            </Link>
+          </div>
 
+          <div className="card p-5 flex flex-col">
+            <span className="text-[11px] uppercase tracking-wide text-[var(--muted)]">
+              Bu ay gəlir
+            </span>
+            <div className="mt-2 flex-1 flex flex-col justify-center">
+              <MonthlyGoalProgress
+                variant="hero"
+                goal={data.monthlyGoal}
+                current={data.monthRevenue}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* TIER 3 — secondary stat strip. Neutral by default; color only on abnormal data. */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard
-            label="Aktiv üzvlər"
-            value={String(data.activeCount)}
-            icon={Users}
-            accent="brand"
-          />
-          <StatCard
+          <MiniStat label="Aktiv üzvlər" value={String(data.activeCount)} icon={Users} signal="neutral" />
+          <MiniStat
             label="Borclu"
             value={String(data.overdueCount)}
             icon={AlertTriangle}
-            accent="danger"
+            signal={data.overdueCount > 0 ? "danger" : "neutral"}
             href={data.overdueCount > 0 ? "/payments?filter=unpaid" : undefined}
           />
-          <StatCard
+          <MiniStat
             label="Bu həftə bitir"
             value={String(data.expiringCount)}
             icon={CalendarClock}
-            accent="warn"
+            signal={data.expiringCount > 0 ? "warn" : "neutral"}
           />
-          <StatCard
-            label="Bu gün giriş"
-            value={String(data.todayCheckIns)}
-            icon={ScanLine}
-            accent="brand"
+          <MiniStat
+            label="Churn (bu ay)"
+            value={`${data.churnRate.toFixed(1)}%`}
+            icon={TrendingDown}
+            signal={churnSignal}
+            sub={`${data.cancelledThisMonth}/${data.activeAtMonthStart} üzv`}
           />
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="card p-5 lg:col-span-2">
-            <RevenueChart data={data.revenueByMonth} />
-          </div>
+        {/* TIER 4 — detail. The quietest zone: trend, then the two action lists. */}
+        <section className="card p-5">
+          <RevenueChart data={data.revenueByMonth} />
+        </section>
 
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-medium">Borclu üzvlər</h2>
-              <span className="text-xs text-[var(--muted)]">{data.overdueCount} nəfər</span>
+              <span
+                className={`text-xs ${
+                  data.overdueCount > 0 ? "text-[var(--signal-danger)]" : "text-[var(--muted)]"
+                }`}
+              >
+                {data.overdueCount} nəfər
+              </span>
             </div>
             {data.overdueMembers.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">Borclu yoxdur 🎉</p>
@@ -142,123 +185,89 @@ export default async function DashboardPage() {
               </ul>
             )}
             {data.overdueCount > 0 && (
-              <Link
-                href="/reminders"
-                className="block text-center btn-brand mt-3"
-              >
+              <Link href="/reminders" className="block text-center btn-brand mt-3">
                 Toplu xatırlatma →
               </Link>
             )}
           </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Target className="w-4 h-4 text-[var(--brand-strong)]" />
-              <h2 className="font-medium">Aylıq gəlir hədəfi</h2>
-            </div>
-            <MonthlyGoalProgress goal={data.monthlyGoal} current={data.monthRevenue} />
-          </div>
 
           <div className="card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingDown className="w-4 h-4 text-red-500" />
-              <h2 className="font-medium">Churn (bu ay)</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-medium">Bu həftə üzvlüyü bitir</h2>
+              <span
+                className={`text-xs ${
+                  data.expiringCount > 0 ? "text-[var(--signal-warn)]" : "text-[var(--muted)]"
+                }`}
+              >
+                {data.expiringCount} nəfər
+              </span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <div className="text-3xl font-semibold">
-                {data.churnRate.toFixed(1)}%
-              </div>
-              <div className="text-xs text-[var(--muted)]">
-                {data.cancelledThisMonth} / {data.activeAtMonthStart} üzv
-              </div>
-            </div>
-            <p className="text-xs text-[var(--muted)] mt-2">
-              Ay başında aktiv olan üzvlərdən neçəsi ləğv edib.
-            </p>
-            <ChurnSeverity rate={data.churnRate} />
+            {data.expiringMembers.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">Bu həftə bitən üzvlük yoxdur.</p>
+            ) : (
+              <ul className="divide-y divide-[var(--border)]">
+                {data.expiringMembers.map((m) => {
+                  const d = daysUntil(m.expiryDate);
+                  const urgent = d <= 2;
+                  return (
+                    <li key={m.id}>
+                      <Link
+                        href={`/members/${m.id}`}
+                        className="py-2.5 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="text-sm font-medium">{m.name}</div>
+                          <div className="text-[11px] text-[var(--muted)]">
+                            {m.publicId} · {fmtDate(m.expiryDate)}
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            urgent
+                              ? "text-[var(--signal-warn)] bg-amber-50"
+                              : "text-[var(--muted)] bg-slate-100"
+                          }`}
+                        >
+                          {d} gün
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-        </section>
-
-        <section className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-medium">Bu həftə üzvlüyü bitir</h2>
-            <span className="text-xs text-[var(--muted)]">{data.expiringCount} nəfər</span>
-          </div>
-          {data.expiringMembers.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Bu həftə bitən üzvlük yoxdur.</p>
-          ) : (
-            <ul className="divide-y divide-[var(--border)]">
-              {data.expiringMembers.map((m) => (
-                <li key={m.id}>
-                  <Link
-                    href={`/members/${m.id}`}
-                    className="py-2.5 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-sm font-medium">{m.name}</div>
-                      <div className="text-[11px] text-[var(--muted)]">
-                        {m.publicId} · {fmtDate(m.expiryDate)}
-                      </div>
-                    </div>
-                    <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                      {daysUntil(m.expiryDate)} gün
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
       </div>
     </AppShell>
   );
 }
 
-function ChurnSeverity({ rate }: { rate: number }) {
-  let label = "Sağlam";
-  let cls = "text-emerald-700 bg-emerald-100";
-  if (rate >= 10) {
-    label = "Yüksək — diqqət lazımdır";
-    cls = "text-red-700 bg-red-100";
-  } else if (rate >= 5) {
-    label = "Orta";
-    cls = "text-amber-700 bg-amber-100";
-  }
-  return (
-    <span className={`inline-block mt-3 text-[11px] px-2 py-0.5 rounded-full ${cls}`}>
-      {label}
-    </span>
-  );
-}
+type Signal = "neutral" | "danger" | "warn";
 
-function StatCard(props: {
+function MiniStat(props: {
   label: string;
   value: string;
   icon: typeof Users;
-  accent: "brand" | "danger" | "warn";
+  signal: Signal;
+  sub?: string;
   href?: string;
 }) {
-  const palettes = {
-    brand: "bg-[var(--brand-soft)] text-[var(--brand-strong)]",
-    danger: "bg-red-100 text-red-600",
-    warn: "bg-amber-100 text-amber-600",
-  };
+  const valueColor =
+    props.signal === "danger"
+      ? "text-[var(--signal-danger)]"
+      : props.signal === "warn"
+        ? "text-[var(--signal-warn)]"
+        : "text-[var(--foreground)]";
   const Icon = props.icon;
   const body = (
-    <div className="card p-4 h-full">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">
-            {props.label}
-          </div>
-          <div className="text-2xl font-semibold mt-1">{props.value}</div>
-        </div>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${palettes[props.accent]}`}>
-          <Icon className="w-4 h-4" />
-        </div>
+    <div className="card p-3.5 h-full">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[var(--muted)]">
+        <Icon className="w-3.5 h-3.5" />
+        <span className="truncate">{props.label}</span>
       </div>
+      <div className={`mt-1 text-xl font-semibold ${valueColor}`}>{props.value}</div>
+      {props.sub && <div className="text-[11px] text-[var(--muted)]">{props.sub}</div>}
     </div>
   );
   if (props.href) {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassUrlToken } from "@/lib/qr";
 import { formatAZN } from "@/lib/members";
 import { RotatingQR } from "@/components/rotating-qr";
+import { PLAN_LABEL } from "@/config/gym-plans";
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: "Aktiv",
@@ -18,12 +19,6 @@ const STATUS_COLOR: Record<string, string> = {
   FROZEN: "bg-blue-100 text-blue-800",
   EXPIRED: "bg-neutral-200 text-neutral-700",
   CANCELLED: "bg-red-100 text-red-800",
-};
-
-const PLAN_LABEL: Record<string, string> = {
-  MONTHLY: "Aylıq",
-  QUARTERLY: "Rüblük",
-  ANNUAL: "İllik",
 };
 
 export default async function MemberPassPage({

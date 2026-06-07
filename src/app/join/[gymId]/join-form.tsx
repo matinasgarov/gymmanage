@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { submitLead, type LeadFormState } from "@/lib/lead-actions";
+import { PLAN_TYPES, PLANS } from "@/config/gym-plans";
 
 const initial: LeadFormState = undefined;
 
@@ -50,9 +51,11 @@ export function JoinForm({ gymId }: { gymId: string }) {
           className="w-full px-3 py-2 border rounded-md bg-white"
         >
           <option value="">Hələ qərarsızam</option>
-          <option value="MONTHLY">Aylıq</option>
-          <option value="QUARTERLY">Rüblük</option>
-          <option value="ANNUAL">İllik</option>
+          {PLAN_TYPES.map((p) => (
+            <option key={p} value={p}>
+              {PLANS[p].label}
+            </option>
+          ))}
         </select>
       </div>
 

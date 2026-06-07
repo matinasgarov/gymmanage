@@ -18,11 +18,9 @@ export const MEMBER_STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
-export const PLAN_LABEL: Record<string, string> = {
-  MONTHLY: "Aylıq",
-  QUARTERLY: "Rüblük",
-  ANNUAL: "İllik",
-};
+// Plan labels live in the centralized plan config — re-exported here so the
+// existing `@/lib/labels` import sites keep working with one source of truth.
+export { PLAN_LABEL } from "@/config/gym-plans";
 
 export const PAYMENT_STATUS_LABEL: Record<string, string> = {
   PAID: "Ödənildi",

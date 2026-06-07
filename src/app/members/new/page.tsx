@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { MemberForm } from "@/components/member-form";
 import { getOwnerDb } from "@/lib/dal";
+import type { PlanType } from "@/generated/prisma/enums";
 
 export default async function NewMemberPage({
   searchParams,
@@ -13,7 +14,7 @@ export default async function NewMemberPage({
   const { leadId } = await searchParams;
   const today = new Date().toISOString().slice(0, 10);
 
-  let leadPrefill: { name: string; phone: string; planType?: "MONTHLY" | "QUARTERLY" | "ANNUAL"; notes: string } | null = null;
+  let leadPrefill: { name: string; phone: string; planType?: PlanType; notes: string } | null = null;
   if (leadId) {
     const lead = await db.lead.findFirst({
       where: { id: leadId, status: { not: "CONVERTED" } },
@@ -46,7 +47,7 @@ export default async function NewMemberPage({
               name: leadPrefill?.name ?? "",
               phone: leadPrefill?.phone ?? "+994",
               email: "",
-              planType: leadPrefill?.planType ?? "MONTHLY",
+              planType: leadPrefill?.planType ?? "MONTHLY_UNLIMITED",
               planPrice: 50,
               startDate: today,
               notes: leadPrefill?.notes ?? "",

@@ -2,22 +2,19 @@
 
 import { useActionState } from "react";
 import { createMember, updateMember, type MemberFormState } from "@/lib/member-actions";
+import type { PlanType } from "@/generated/prisma/enums";
+import { PLAN_TYPES, PLANS } from "@/config/gym-plans";
 
 export type MemberFormDefaults = {
   name: string;
   phone: string;
   email: string;
-  planType: "MONTHLY" | "QUARTERLY" | "ANNUAL";
+  planType: PlanType;
   planPrice: number;
   startDate: string;
   notes: string;
+  unlimitedEntries?: boolean;
 };
-
-const PLAN_LABEL = {
-  MONTHLY: "Aylıq",
-  QUARTERLY: "Rüblük (3 ay)",
-  ANNUAL: "İllik",
-} as const;
 
 const initial: MemberFormState = undefined;
 
@@ -65,9 +62,10 @@ export function MemberForm(props: {
           defaultValue={props.defaults.planType}
           className="w-full px-3 py-2 border rounded-md bg-white"
         >
-          {Object.entries(PLAN_LABEL).map(([v, l]) => (
+          {PLAN_TYPES.map((v) => (
             <option key={v} value={v}>
-              {l}
+              {PLANS[v].label}
+              {PLANS[v].maxEntries != null ? ` — ${PLANS[v].maxEntries} giriş/ay` : ""}
             </option>
           ))}
         </select>
@@ -99,6 +97,21 @@ export function MemberForm(props: {
           className="w-full px-3 py-2 border rounded-md"
         />
       </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="unlimitedEntries"
+          name="unlimitedEntries"
+          value="true"
+          defaultChecked={props.defaults.unlimitedEntries ?? false}
+          className="h-4 w-4 rounded border-neutral-300"
+        />
+        <label htmlFor="unlimitedEntries" className="text-sm">
+          Gündə bir dəfədən çox girişə icazə ver
+        </label>
+      </div>
+      {/* The per-cycle entry cap is driven by the selected plan (e.g. "12 giriş"
+          → 12/ay) in member-actions, so there is no manual limit field. */}
       {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
       <button
         type="submit"

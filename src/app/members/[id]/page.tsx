@@ -11,12 +11,14 @@ import {
   reactivateMember,
 } from "@/lib/member-actions";
 import { signPassUrlToken, buildPassUrl } from "@/lib/qr";
+import { effectiveMemberStatus } from "@/lib/members-format";
 import {
   ensurePendingPayments,
   formatPeriodLabel,
   computeEffectiveStatus,
 } from "@/lib/payments";
 import { markPaymentPaid, unmarkPayment } from "@/lib/payment-actions";
+import { RenewButton } from "@/components/renew-button";
 import { CancelDialog } from "@/components/cancel-dialog";
 import { DeleteMemberDialog } from "@/components/delete-member-dialog";
 import { PhotoUpload } from "@/components/photo-upload";
@@ -52,6 +54,9 @@ export default async function MemberDetailPage({
   });
 
   if (!member) notFound();
+
+  // Stored status never flips to EXPIRED; derive it from expiryDate for display.
+  const effStatus = effectiveMemberStatus(member);
 
   // Passive anti-sharing signal: how often this pass has been moved to a new
   // device (each transfer is phone-verified + logged). Derived from audit rows.
@@ -122,8 +127,8 @@ export default async function MemberDetailPage({
 
         <section className="card p-5 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <Info label="Status">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[member.status]}`}>
-              {STATUS_LABEL[member.status]}
+            <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[effStatus]}`}>
+              {STATUS_LABEL[effStatus]}
             </span>
           </Info>
           <Info label="Plan" value={PLAN_LABEL[member.planType]} />
@@ -166,7 +171,10 @@ export default async function MemberDetailPage({
         </section>
 
         <section className="card p-5">
-          <h2 className="font-medium mb-3">Ödənişlər</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+            <h2 className="font-medium">Ödənişlər</h2>
+            <RenewButton memberId={member.id} expiryDate={member.expiryDate.toISOString()} />
+          </div>
           {member.payments.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">Hələ ödəniş qeydiyyatı yoxdur.</p>
           ) : (

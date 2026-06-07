@@ -1,12 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { PlanType } from "@/generated/prisma/enums";
-
-const PLAN_DAYS: Record<PlanType, number> = {
-  MONTHLY: 30,
-  QUARTERLY: 90,
-  ANNUAL: 365,
-};
+import { planDurationDays } from "@/config/gym-plans";
 
 // Days after dueDate before a pending payment is considered overdue.
 const OVERDUE_GRACE_DAYS = 5;
@@ -22,8 +17,9 @@ export function periodKey(date: Date): string {
 
 export function formatPeriodLabel(periodStart: Date, plan: PlanType): string {
   const end = new Date(periodStart);
-  end.setUTCDate(end.getUTCDate() + PLAN_DAYS[plan] - 1);
-  if (plan === "MONTHLY") {
+  end.setUTCDate(end.getUTCDate() + planDurationDays(plan) - 1);
+  // Any 30-day plan (Monthly Unlimited, 12-entries) gets the "May 2026" label.
+  if (planDurationDays(plan) === 30) {
     return `${AZ_MONTHS[periodStart.getUTCMonth()]} ${periodStart.getUTCFullYear()}`;
   }
   return `${periodStart.getUTCDate()} ${AZ_MONTHS[periodStart.getUTCMonth()]} – ${end.getUTCDate()} ${AZ_MONTHS[end.getUTCMonth()]} ${end.getUTCFullYear()}`;
@@ -31,7 +27,7 @@ export function formatPeriodLabel(periodStart: Date, plan: PlanType): string {
 
 // All period start dates from start to today (inclusive), for a plan.
 export function periodsThrough(start: Date, plan: PlanType, now = new Date()): Date[] {
-  const days = PLAN_DAYS[plan];
+  const days = planDurationDays(plan);
   const out: Date[] = [];
   const cursor = new Date(Date.UTC(
     start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()

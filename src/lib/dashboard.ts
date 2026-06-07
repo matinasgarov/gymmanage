@@ -154,9 +154,9 @@ export async function getDashboard(gymId: string) {
       : null;
 
   // Aggregate revenue by plan + visitor pseudo-plan, exact integer cents.
-  const planCents: Record<string, number> = { MONTHLY: 0, QUARTERLY: 0, ANNUAL: 0 };
+  const planCents: Record<string, number> = {};
   for (const p of monthRevenueByPlan) {
-    const plan = p.member?.planType ?? "MONTHLY";
+    const plan = p.member?.planType ?? "MONTHLY_UNLIMITED";
     planCents[plan] = (planCents[plan] ?? 0) + toCents(p.amount);
   }
   const revenueByPlan = Object.entries(planCents)

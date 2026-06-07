@@ -1,8 +1,10 @@
 "use server";
 
 import { getActorDb, type Actor } from "@/lib/actor";
+import type { GymDb } from "@/lib/tenant";
+import type { PlanType } from "@/generated/prisma/enums";
 import { parseScanToken, verifyScanToken } from "@/lib/qr";
-import { ensurePendingPayments, computeEffectiveStatus } from "@/lib/payments";
+import { ensurePendingPayments, computeEffectiveStatus, periodsThrough } from "@/lib/payments";
 import { verifyVisitorPassScan } from "@/lib/visitor-actions";
 
 export type ScanResult =
@@ -40,7 +42,29 @@ const REASON: Record<string, string> = {
   EXPIRED: "Üzvlük başa çatıb",
   CANCELLED: "Üzvlük ləğv edilib",
   PAYMENT: "Ödəniş gözlənilir",
+  already_entered: "Bu gün artıq giriş edilib",
+  limit_reached: "Aylıq giriş limiti dolub",
 };
+
+// Whether a capped member has used up their per-cycle entries. The cycle is the
+// member's current billing period (latest period start from their startDate).
+async function monthlyCapReached(
+  db: GymDb,
+  member: {
+    id: string;
+    startDate: Date;
+    planType: PlanType;
+    monthlyEntryLimit: number | null;
+  }
+): Promise<boolean> {
+  if (member.monthlyEntryLimit == null) return false;
+  const periods = periodsThrough(member.startDate, member.planType);
+  const cycleStart = periods[periods.length - 1] ?? member.startDate;
+  const used = await db.checkIn.count({
+    where: { memberId: member.id, result: "GRANTED", scannedAt: { gte: cycleStart } },
+  });
+  return used >= member.monthlyEntryLimit;
+}
 
 // Accept either a raw rotating token, or a URL containing ?t=TOKEN
 function extractToken(input: string): string {
@@ -124,6 +148,10 @@ export async function verifyScan(raw: string): Promise<ScanResult> {
       status: true,
       qrSecret: true,
       expiryDate: true,
+      unlimitedEntries: true,
+      startDate: true,
+      planType: true,
+      monthlyEntryLimit: true,
     },
   });
   if (!member) {
@@ -192,6 +220,52 @@ export async function verifyScan(raw: string): Promise<ScanResult> {
         canOverride: canOverride(actor),
       };
     }
+  }
+
+  // Once-per-day gate (skipped for unlimited-entries members)
+  if (!member.unlimitedEntries) {
+    const todayUtc = new Date();
+    todayUtc.setUTCHours(0, 0, 0, 0);
+    const alreadyIn = await db.checkIn.findFirst({
+      where: { memberId: member.id, result: "GRANTED", scannedAt: { gte: todayUtc } },
+      select: { id: true },
+    });
+    if (alreadyIn) {
+      await db.checkIn.create({
+        data: {
+          gymId,
+          memberId: member.id,
+          ...attribution(actor),
+          result: "DENIED",
+          deniedReason: REASON.already_entered,
+        },
+      });
+      return {
+        ok: false,
+        reason: REASON.already_entered,
+        member: memberInfo,
+        canOverride: canOverride(actor),
+      };
+    }
+  }
+
+  // Monthly entry cap (per billing cycle)
+  if (await monthlyCapReached(db, member)) {
+    await db.checkIn.create({
+      data: {
+        gymId,
+        memberId: member.id,
+        ...attribution(actor),
+        result: "DENIED",
+        deniedReason: REASON.limit_reached,
+      },
+    });
+    return {
+      ok: false,
+      reason: REASON.limit_reached,
+      member: memberInfo,
+      canOverride: canOverride(actor),
+    };
   }
 
   // Granted
@@ -288,6 +362,10 @@ export async function grantManualEntry(memberId: string): Promise<ScanResult> {
       photoUrl: true,
       status: true,
       expiryDate: true,
+      unlimitedEntries: true,
+      startDate: true,
+      planType: true,
+      monthlyEntryLimit: true,
     },
   });
   if (!member) return { ok: false, reason: REASON.not_found };
@@ -346,6 +424,50 @@ export async function grantManualEntry(memberId: string): Promise<ScanResult> {
         canOverride: canOverride(actor),
       };
     }
+  }
+
+  if (!member.unlimitedEntries) {
+    const todayUtc = new Date();
+    todayUtc.setUTCHours(0, 0, 0, 0);
+    const alreadyIn = await db.checkIn.findFirst({
+      where: { memberId: member.id, result: "GRANTED", scannedAt: { gte: todayUtc } },
+      select: { id: true },
+    });
+    if (alreadyIn) {
+      await db.checkIn.create({
+        data: {
+          gymId,
+          memberId: member.id,
+          ...attribution(actor),
+          result: "DENIED",
+          deniedReason: REASON.already_entered,
+        },
+      });
+      return {
+        ok: false,
+        reason: REASON.already_entered,
+        member: memberInfo,
+        canOverride: canOverride(actor),
+      };
+    }
+  }
+
+  if (await monthlyCapReached(db, member)) {
+    await db.checkIn.create({
+      data: {
+        gymId,
+        memberId: member.id,
+        ...attribution(actor),
+        result: "DENIED",
+        deniedReason: REASON.limit_reached,
+      },
+    });
+    return {
+      ok: false,
+      reason: REASON.limit_reached,
+      member: memberInfo,
+      canOverride: canOverride(actor),
+    };
   }
 
   const checkIn = await db.checkIn.create({

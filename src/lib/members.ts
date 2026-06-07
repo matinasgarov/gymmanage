@@ -2,16 +2,11 @@ import "server-only";
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import type { PlanType } from "@/generated/prisma/enums";
-
-const PLAN_DAYS: Record<PlanType, number> = {
-  MONTHLY: 30,
-  QUARTERLY: 90,
-  ANNUAL: 365,
-};
+import { planDurationDays } from "@/config/gym-plans";
 
 export function addPlanDays(start: Date, plan: PlanType): Date {
   const d = new Date(start);
-  d.setUTCDate(d.getUTCDate() + PLAN_DAYS[plan]);
+  d.setUTCDate(d.getUTCDate() + planDurationDays(plan));
   return d;
 }
 

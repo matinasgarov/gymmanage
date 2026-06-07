@@ -39,6 +39,7 @@ export default async function EditMemberPage({
               planPrice: Number(member.planPrice.toString()),
               startDate: member.startDate.toISOString().slice(0, 10),
               notes: member.notes ?? "",
+              unlimitedEntries: member.unlimitedEntries,
             }}
           />
         </div>

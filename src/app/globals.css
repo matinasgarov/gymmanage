@@ -22,6 +22,14 @@
   /* Header banner */
   --header-grad-from: #16505f;
   --header-grad-to: #0f3a48;
+
+  /* Dashboard semantic signals — muted by default, color only on abnormal data.
+     Default state reads neutral; these light up to pull the eye to what needs action. */
+  --stat-neutral: var(--muted);   /* slate grey — the calm default */
+  --signal-danger: #dc2626;       /* overdue > 0, churn ≥ 10% */
+  --signal-warn: #d97706;         /* expiring > 0, churn ≥ 5% */
+  --signal-ok: #059669;           /* goal reached, deliberate CTA */
+  --pulse: var(--brand);          /* the one always-on accent — live check-in dot */
 }
 
 @theme inline {
@@ -109,4 +117,48 @@ textarea::placeholder {
   border-radius: 14px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+/* Live check-in pulse dot — the dashboard's single always-on accent. */
+.pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--pulse);
+}
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: var(--pulse);
+  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot::after { animation: none; }
+}
+
+/* html5-qrcode: fill the scanner container and hide the library's own controls */
+#gympass-qr-reader {
+  height: 100%;
+  border: none !important;
+  padding: 0 !important;
+}
+#gympass-qr-reader__scan_region {
+  height: 100% !important;
+  min-height: 100% !important;
+}
+#gympass-qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+#gympass-qr-reader__dashboard {
+  display: none !important;
 }

@@ -7,6 +7,7 @@ import { getOwnerDb } from "@/lib/dal";
 import { memberSchema } from "@/lib/validators";
 import { addPlanDays, nextPublicId, newQrSecret } from "@/lib/members";
 import { periodKey } from "@/lib/payments";
+import { planMaxEntries } from "@/config/gym-plans";
 
 export type MemberFormState =
   | { errors?: Record<string, string[]>; message?: string }
@@ -33,6 +34,9 @@ export async function createMember(
   }
 
   const data = parsed.data;
+  const unlimitedEntries = formData.get("unlimitedEntries") === "true";
+  // Per-cycle entry cap is dictated by the chosen plan (e.g. 12 for 12-entries).
+  const monthlyEntryLimit = planMaxEntries(data.planType);
   const publicId = await nextPublicId(user.gymId);
   const expiryDate = addPlanDays(data.startDate, data.planType);
   const leadIdRaw = formData.get("leadId");
@@ -53,6 +57,8 @@ export async function createMember(
         expiryDate,
         notes: data.notes,
         qrSecret: newQrSecret(),
+        unlimitedEntries,
+        monthlyEntryLimit,
       },
     });
 
@@ -124,12 +130,16 @@ export async function updateMember(
     return { errors: z.flattenError(parsed.error).fieldErrors };
   }
 
+  const unlimitedEntries = formData.get("unlimitedEntries") === "true";
+
   const existing = await db.member.findFirst({
     where: { id: memberId },
   });
   if (!existing) return { message: "Üzv tapılmadı" };
 
   const data = parsed.data;
+  // Per-cycle entry cap follows the (possibly changed) plan.
+  const monthlyEntryLimit = planMaxEntries(data.planType);
   const expiryDate = addPlanDays(data.startDate, data.planType);
 
   await db.$transaction(async (tx) => {
@@ -144,6 +154,8 @@ export async function updateMember(
         startDate: data.startDate,
         expiryDate,
         notes: data.notes,
+        unlimitedEntries,
+        monthlyEntryLimit,
       },
     });
 

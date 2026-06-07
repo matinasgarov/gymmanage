@@ -53,8 +53,11 @@ export function RevenueChart({ data }: { data: Point[] }) {
         ))}
       </div>
 
-      <div className="h-48 w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      {/* min-w-0 stops a flex/grid ancestor from collapsing the measured width;
+          an explicit numeric height avoids Recharts' "width(-1)/height(-1)" warning
+          on the first paint before the ResizeObserver fires. */}
+      <div className="h-48 w-full min-w-0">
+        <ResponsiveContainer width="100%" height={192} minWidth={0}>
           <BarChart data={sliced} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
             <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
             <YAxis

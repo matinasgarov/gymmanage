@@ -8,12 +8,19 @@ function fmtAzn(n: number): string {
   return n.toLocaleString("az", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Hero figures drop the cents — on a monthly headline, decimals are noise.
+function fmtAznHero(n: number): string {
+  return Math.round(n).toLocaleString("az");
+}
+
 export function MonthlyGoalProgress({
   goal,
   current,
+  variant = "compact",
 }: {
   goal: number | null;
   current: number;
+  variant?: "compact" | "hero";
 }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<SettingsState>(undefined);
@@ -37,6 +44,130 @@ export function MonthlyGoalProgress({
 
   const pct = goal && goal > 0 ? Math.min(100, (current / goal) * 100) : 0;
   const reached = goal != null && goal > 0 && current >= goal;
+
+  const modal = open ? (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={() => setOpen(false)}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl bg-white p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <Target className="h-4 w-4 text-[var(--brand-strong)]" />
+            Aylıq gəlir hədəfi
+          </h3>
+          <button onClick={() => setOpen(false)} className="-mr-1 p-1" aria-label="Bağla">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mb-3 text-xs text-[var(--muted)]">
+          Hər ay üçün gəlir hədəfinizi təyin edin. İrəliləyiş hər ay yenidən başlayır.
+        </p>
+
+        <form action={submit} className="space-y-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <input
+                name="goal"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="decimal"
+                defaultValue={goal ?? ""}
+                placeholder="Məsələn: 5000"
+                autoFocus
+                className="w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
+              />
+              <span className="text-sm text-[var(--muted)]">₼</span>
+            </div>
+            {state?.errors?.goal?.[0] && (
+              <p className="mt-1 text-xs text-red-600">{state.errors.goal[0]}</p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-1">
+            {goal != null ? (
+              <button
+                type="button"
+                onClick={clear}
+                disabled={pending}
+                className="text-xs text-red-600 hover:underline disabled:opacity-40"
+              >
+                Hədəfi sil
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
+                Ləğv et
+              </button>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+              >
+                {pending ? "Yadda saxlanılır…" : "Yadda saxla"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  ) : null;
+
+  // Hero variant: a large revenue figure is the focal point; the goal bar sits
+  // beneath it. Used in the dashboard's top hero band.
+  if (variant === "hero") {
+    return (
+      <div>
+        <div className="text-4xl font-semibold tracking-tight">
+          {fmtAznHero(current)} <span className="text-2xl font-normal text-[var(--muted)]">₼</span>
+        </div>
+        {goal == null ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border)] px-3 py-2 text-xs text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand-strong)]"
+          >
+            <Target className="h-3.5 w-3.5" />
+            Aylıq gəlir hədəfi təyin et
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="group mt-3 block w-full text-left"
+            aria-label="Hədəfi dəyiş"
+          >
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full ${reached ? "bg-[var(--signal-ok)]" : "bg-[var(--brand)]"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex items-center justify-between text-xs text-[var(--muted)]">
+              <span className="flex items-center gap-1">
+                Hədəf: {fmtAznHero(goal)} ₼
+                <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+              </span>
+              <span>{pct.toFixed(0)}%</span>
+            </div>
+            {reached && (
+              <p className="mt-1 text-[11px] font-medium text-[var(--signal-ok)]">
+                Hədəfə çatdınız! 🎉
+              </p>
+            )}
+          </button>
+        )}
+        {modal}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -77,80 +208,7 @@ export function MonthlyGoalProgress({
         </button>
       )}
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl bg-white p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 font-semibold">
-                <Target className="h-4 w-4 text-[var(--brand-strong)]" />
-                Aylıq gəlir hədəfi
-              </h3>
-              <button onClick={() => setOpen(false)} className="-mr-1 p-1" aria-label="Bağla">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <p className="mb-3 text-xs text-[var(--muted)]">
-              Hər ay üçün gəlir hədəfinizi təyin edin. İrəliləyiş hər ay yenidən başlayır.
-            </p>
-
-            <form action={submit} className="space-y-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <input
-                    name="goal"
-                    type="number"
-                    min="0"
-                    step="1"
-                    inputMode="decimal"
-                    defaultValue={goal ?? ""}
-                    placeholder="Məsələn: 5000"
-                    autoFocus
-                    className="w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
-                  />
-                  <span className="text-sm text-[var(--muted)]">₼</span>
-                </div>
-                {state?.errors?.goal?.[0] && (
-                  <p className="mt-1 text-xs text-red-600">{state.errors.goal[0]}</p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-1">
-                {goal != null ? (
-                  <button
-                    type="button"
-                    onClick={clear}
-                    disabled={pending}
-                    className="text-xs text-red-600 hover:underline disabled:opacity-40"
-                  >
-                    Hədəfi sil
-                  </button>
-                ) : (
-                  <span />
-                )}
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
-                    Ləğv et
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={pending}
-                    className="rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-                  >
-                    {pending ? "Yadda saxlanılır…" : "Yadda saxla"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {modal}
     </div>
   );
 }

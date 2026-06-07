@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getOwnerDb } from "@/lib/dal";
 import { LeadRowActions } from "@/components/lead-row-actions";
+import { PLAN_LABEL } from "@/config/gym-plans";
 
 const STATUS_LABEL: Record<string, string> = {
   NEW: "Yeni",
@@ -17,12 +18,6 @@ const STATUS_COLOR: Record<string, string> = {
   CONVERTED: "bg-emerald-100 text-emerald-700",
   LOST: "bg-slate-200 text-slate-700",
 };
-const PLAN_LABEL: Record<string, string> = {
-  MONTHLY: "Aylıq",
-  QUARTERLY: "Rüblük",
-  ANNUAL: "İllik",
-};
-
 function fmtDateTime(d: Date) {
   return d.toISOString().replace("T", " ").slice(0, 16);
 }

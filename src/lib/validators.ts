@@ -1,4 +1,8 @@
 import { z } from "zod";
+import type { PlanType } from "@/generated/prisma/enums";
+import { PLAN_TYPES } from "@/config/gym-plans";
+
+const planTypeEnum = z.enum(PLAN_TYPES as unknown as [PlanType, ...PlanType[]]);
 
 export const signupSchema = z.object({
   gymName: z.string().min(2, "Gym adı ən az 2 simvol olmalıdır").trim(),
@@ -31,7 +35,7 @@ export const memberSchema = z.object({
   email: z
     .union([z.literal(""), z.email("Düzgün email daxil edin")])
     .transform((v) => (v === "" ? null : v.toLowerCase().trim())),
-  planType: z.enum(["MONTHLY", "QUARTERLY", "ANNUAL"]),
+  planType: planTypeEnum,
   planPrice: z.coerce
     .number()
     .positive("Qiymət 0-dan böyük olmalıdır")

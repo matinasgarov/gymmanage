@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getOwnerDb } from "@/lib/dal";
+import type { PlanType } from "@/generated/prisma/enums";
+import { PLAN_TYPES } from "@/config/gym-plans";
 
 // ─── Public action (no auth) ─────────────────────────────────────────
 
@@ -14,7 +16,7 @@ const leadSchema = z.object({
     .string()
     .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır"),
   interest: z
-    .union([z.enum(["MONTHLY", "QUARTERLY", "ANNUAL"]), z.literal("")])
+    .union([z.enum(PLAN_TYPES as unknown as [PlanType, ...PlanType[]]), z.literal("")])
     .transform((v) => (v === "" ? null : v)),
   message: z
     .union([z.literal(""), z.string().max(500)])
