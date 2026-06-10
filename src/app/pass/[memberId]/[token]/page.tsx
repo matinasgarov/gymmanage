@@ -3,10 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassUrlToken } from "@/lib/qr";
 import { formatAZN } from "@/lib/members";
 import { RotatingQR } from "@/components/rotating-qr";
-import { getT } from "@/lib/i18n-server";
 import { ensurePendingPayments, computeDebt } from "@/lib/payments";
 import { buildWaUrl } from "@/lib/templates";
-import { isLocale, DEFAULT_LOCALE } from "@/lib/i18n";
+import { createT, getDictionary, isLocale, DEFAULT_LOCALE } from "@/lib/i18n";
 
 const STATUS_COLOR: Record<string, string> = {
   ACTIVE: "bg-green-100 text-green-800",
@@ -22,7 +21,6 @@ export default async function MemberPassPage({
   params: Promise<{ memberId: string; token: string }>;
 }) {
   const { memberId, token } = await params;
-  const t = await getT();
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
@@ -34,26 +32,35 @@ export default async function MemberPassPage({
   if (!member) notFound();
   if (!verifyPassUrlToken(member.id, member.qrSecret, token)) notFound();
 
-  await ensurePendingPayments(member.id);
-  const now = new Date();
-  const unpaidRows = await prisma.payment.findMany({
-    where: {
-      memberId: member.id,
-      status: { not: "PAID" },
-      paidAt: null,
-      dueDate: { lte: now },
-    },
-    select: { status: true, dueDate: true, paidAt: true, amount: true },
-  });
   const gymLocale = isLocale(member.gym.locale) ? member.gym.locale : DEFAULT_LOCALE;
-  const debt = computeDebt(
-    unpaidRows.map((r) => ({ ...r, amount: Number(r.amount.toString()) })),
-    member.planType,
-    gymLocale,
-    now
-  );
+  const t = createT(getDictionary(gymLocale), gymLocale);
+
+  const now = new Date();
+  const bannerEligible = member.status === "ACTIVE" || member.status === "OVERDUE";
+
+  let debt: ReturnType<typeof computeDebt> = null;
+  if (bannerEligible) {
+    await ensurePendingPayments(member.id);
+    const unpaidRows = await prisma.payment.findMany({
+      where: {
+        memberId: member.id,
+        status: { not: "PAID" },
+        paidAt: null,
+        dueDate: { lte: now },
+      },
+      select: { status: true, dueDate: true, paidAt: true, amount: true },
+    });
+    debt = computeDebt(
+      unpaidRows.map((r) => ({ ...r, amount: Number(r.amount.toString()) })),
+      member.planType,
+      gymLocale,
+      now
+    );
+  }
+
+  const showDebt = bannerEligible && debt !== null;
   const daysToExpiry = Math.ceil((member.expiryDate.getTime() - now.getTime()) / 86_400_000);
-  const showExpirySoon = !debt && daysToExpiry >= 0 && daysToExpiry <= 7;
+  const showExpirySoon = bannerEligible && !debt && daysToExpiry >= 0 && daysToExpiry <= 7;
   const waUrl = member.gym.phone
     ? buildWaUrl(
         member.gym.phone,
@@ -69,16 +76,16 @@ export default async function MemberPassPage({
           <p className="text-xs text-neutral-500">{t("pass.memberCard")}</p>
         </header>
 
-        {(debt || showExpirySoon) && (
+        {(showDebt || showExpirySoon) && (
           <div
             className={`rounded-lg px-4 py-3 text-sm border ${
-              debt
+              showDebt
                 ? "bg-amber-50 text-amber-900 border-amber-200"
                 : "bg-blue-50 text-blue-900 border-blue-200"
             }`}
           >
             <p className="font-medium">
-              {debt
+              {showDebt && debt
                 ? t("pass.debtBanner", {
                     amount: debt.amount.toFixed(2),
                     period: debt.periodLabel,
