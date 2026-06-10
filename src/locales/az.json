@@ -495,7 +495,11 @@
     "plan": "Plan",
     "price": "Qiymət",
     "expiry": "Bitmə",
-    "addToHomeHint": "Bu səhifəni əlavə etmək üçün brauzerdə \"Ana ekrana əlavə et\" funksiyasından istifadə edin."
+    "addToHomeHint": "Bu səhifəni əlavə etmək üçün brauzerdə \"Ana ekrana əlavə et\" funksiyasından istifadə edin.",
+    "debtBanner": "Ödəniş gözlənilir: {amount}₼ ({period})",
+    "expiresSoon": { "one": "Üzvlüyünüz {count} gün sonra bitir", "other": "Üzvlüyünüz {count} gün sonra bitir" },
+    "contactGym": "Zala yaz",
+    "renewMessage": "Salam! {gymName} üzvlüyümü yeniləmək istəyirəm ({publicId})."
   },
   "visitPass": {
     "title": "Günlük qonaq kartı",
