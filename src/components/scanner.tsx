@@ -11,6 +11,8 @@ type ScannerState =
 
 const SCANNER_ELEMENT_ID = "gympass-qr-reader";
 const RESULT_DISPLAY_MS = 3500;
+// Debt results carry an extra line of payment info — give staff longer to read it.
+const DEBT_RESULT_DISPLAY_MS = 6000;
 // Same QR can't be re-scanned within this window. Must outlive the result
 // overlay + the brief moment the camera comes back up while the QR is still
 // in front of the lens, so longer than RESULT_DISPLAY_MS.
@@ -116,9 +118,10 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
 
   useEffect(() => {
     if (state.mode !== "result") return;
+    const delay = state.result.ok && state.result.debt ? DEBT_RESULT_DISPLAY_MS : RESULT_DISPLAY_MS;
     const timer = setTimeout(() => {
       void startCamera();
-    }, RESULT_DISPLAY_MS);
+    }, delay);
     return () => clearTimeout(timer);
   }, [state, startCamera]);
 
@@ -223,7 +226,7 @@ function ResultOverlay(props: {
   const { result } = props;
   const granted = result.ok;
   const debt = result.ok ? result.debt : undefined;
-  const bg = !granted ? "bg-red-600" : debt ? "bg-amber-500" : "bg-green-600";
+  const bg = !granted ? "bg-red-600" : debt ? "bg-amber-600" : "bg-green-600";
   const photoUrl = result.ok ? result.member.photoUrl : result.member?.photoUrl;
 
   return (
@@ -258,7 +261,7 @@ function ResultOverlay(props: {
                   period: debt.periodLabel,
                 })}
               </div>
-              <div className="text-sm opacity-90">
+              <div className="text-sm">
                 {t("scan.debtGrace", { count: debt.graceDaysLeft })}
               </div>
             </div>
