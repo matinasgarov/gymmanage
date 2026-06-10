@@ -4,7 +4,7 @@ import { getActorDb, type Actor } from "@/lib/actor";
 import type { GymDb } from "@/lib/tenant";
 import type { PlanType } from "@/generated/prisma/enums";
 import { parseScanToken, verifyScanToken } from "@/lib/qr";
-import { ensurePendingPayments, computeEffectiveStatus, periodsThrough } from "@/lib/payments";
+import { ensurePendingPayments, computeDebt, periodsThrough, type DebtSummary } from "@/lib/payments";
 import { verifyVisitorPassScan } from "@/lib/visitor-actions";
 
 export type ScanResult =
@@ -19,6 +19,7 @@ export type ScanResult =
         expiryDate: string;
       };
       checkInId: string;
+      debt?: { amount: number; periodLabel: string; graceDaysLeft: number };
     }
   | {
       ok: false;
@@ -64,6 +65,29 @@ async function monthlyCapReached(
     where: { memberId: member.id, result: "GRANTED", scannedAt: { gte: cycleStart } },
   });
   return used >= member.monthlyEntryLimit;
+}
+
+// Debt gate shared by verifyScan and grantManualEntry: ensures payment rows
+// exist, then summarizes everything unpaid and due. OVERDUE → deny upstream;
+// PENDING (within grace) → grant with the debt attached.
+async function assessPaymentDebt(
+  db: GymDb,
+  member: { id: string; planType: PlanType }
+): Promise<DebtSummary | null> {
+  await ensurePendingPayments(member.id);
+  const rows = await db.payment.findMany({
+    where: {
+      memberId: member.id,
+      status: { not: "PAID" },
+      paidAt: null,
+      dueDate: { lte: new Date() },
+    },
+    select: { status: true, dueDate: true, paidAt: true, amount: true },
+  });
+  return computeDebt(
+    rows.map((r) => ({ ...r, amount: Number(r.amount.toString()) })),
+    member.planType
+  );
 }
 
 // Accept either a raw rotating token, or a URL containing ?t=TOKEN
@@ -191,35 +215,23 @@ export async function verifyScan(raw: string): Promise<ScanResult> {
   }
 
   // Payment check for the current period
-  await ensurePendingPayments(member.id);
-  const today = new Date();
-  const currentPayment = await db.payment.findFirst({
-    where: {
-      memberId: member.id,
-      dueDate: { lte: today },
-    },
-    orderBy: { dueDate: "desc" },
-  });
-
-  if (currentPayment) {
-    const eff = computeEffectiveStatus(currentPayment);
-    if (eff !== "PAID") {
-      await db.checkIn.create({
-        data: {
-          gymId,
-          memberId: member.id,
-          ...attribution(actor),
-          result: "DENIED",
-          deniedReason: REASON.PAYMENT,
-        },
-      });
-      return {
-        ok: false,
-        reason: REASON.PAYMENT,
-        member: memberInfo,
-        canOverride: canOverride(actor),
-      };
-    }
+  const debt = await assessPaymentDebt(db, member);
+  if (debt && debt.effective === "OVERDUE") {
+    await db.checkIn.create({
+      data: {
+        gymId,
+        memberId: member.id,
+        ...attribution(actor),
+        result: "DENIED",
+        deniedReason: REASON.PAYMENT,
+      },
+    });
+    return {
+      ok: false,
+      reason: REASON.PAYMENT,
+      member: memberInfo,
+      canOverride: canOverride(actor),
+    };
   }
 
   // Once-per-day gate (skipped for unlimited-entries members)
@@ -286,6 +298,9 @@ export async function verifyScan(raw: string): Promise<ScanResult> {
       expiryDate: member.expiryDate.toISOString().slice(0, 10),
     },
     checkInId: checkIn.id,
+    ...(debt
+      ? { debt: { amount: debt.amount, periodLabel: debt.periodLabel, graceDaysLeft: debt.graceDaysLeft } }
+      : {}),
   };
 }
 
@@ -399,31 +414,23 @@ export async function grantManualEntry(memberId: string): Promise<ScanResult> {
     };
   }
 
-  await ensurePendingPayments(member.id);
-  const today = new Date();
-  const currentPayment = await db.payment.findFirst({
-    where: { memberId: member.id, dueDate: { lte: today } },
-    orderBy: { dueDate: "desc" },
-  });
-  if (currentPayment) {
-    const eff = computeEffectiveStatus(currentPayment);
-    if (eff !== "PAID") {
-      await db.checkIn.create({
-        data: {
-          gymId,
-          memberId: member.id,
-          ...attribution(actor),
-          result: "DENIED",
-          deniedReason: REASON.PAYMENT,
-        },
-      });
-      return {
-        ok: false,
-        reason: REASON.PAYMENT,
-        member: memberInfo,
-        canOverride: canOverride(actor),
-      };
-    }
+  const debt = await assessPaymentDebt(db, member);
+  if (debt && debt.effective === "OVERDUE") {
+    await db.checkIn.create({
+      data: {
+        gymId,
+        memberId: member.id,
+        ...attribution(actor),
+        result: "DENIED",
+        deniedReason: REASON.PAYMENT,
+      },
+    });
+    return {
+      ok: false,
+      reason: REASON.PAYMENT,
+      member: memberInfo,
+      canOverride: canOverride(actor),
+    };
   }
 
   if (!member.unlimitedEntries) {
@@ -487,5 +494,8 @@ export async function grantManualEntry(memberId: string): Promise<ScanResult> {
       expiryDate: member.expiryDate.toISOString().slice(0, 10),
     },
     checkInId: checkIn.id,
+    ...(debt
+      ? { debt: { amount: debt.amount, periodLabel: debt.periodLabel, graceDaysLeft: debt.graceDaysLeft } }
+      : {}),
   };
 }

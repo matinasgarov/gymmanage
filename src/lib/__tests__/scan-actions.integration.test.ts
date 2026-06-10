@@ -179,3 +179,36 @@ describe("scan-actions — owner override", () => {
     expect(audit).toBe(1);
   });
 });
+
+describe("scan-actions — grace entry with debt", () => {
+  it("grants with a debt payload when the current period is unpaid but within grace", async () => {
+    const gym = await seedGym();
+    const owner = await seedOwner(gym.id);
+    // startDate 2 days ago → current period due 2 days ago: unpaid, within 5-day grace.
+    const member = await seedMember(gym.id, { startDate: new Date(Date.now() - 2 * DAY) });
+    await login(owner);
+    const { token } = signScanToken(member.id, member.qrSecret);
+
+    const res = await verifyScan(token);
+
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.debt).toBeTruthy();
+      expect(res.debt?.amount).toBeGreaterThan(0);
+      expect(res.debt?.graceDaysLeft).toBeGreaterThan(0);
+    }
+    const granted = await prisma.checkIn.count({
+      where: { memberId: member.id, result: "GRANTED" },
+    });
+    expect(granted).toBe(1);
+  });
+
+  it("carries no debt payload when the current period is paid", async () => {
+    const { member } = await activeMember();
+    const { token } = signScanToken(member.id, member.qrSecret);
+
+    const res = await verifyScan(token);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.debt).toBeUndefined();
+  });
+});

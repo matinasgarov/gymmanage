@@ -90,12 +90,13 @@ export async function ensurePendingPayments(memberId: string) {
 }
 
 export function computeEffectiveStatus(
-  payment: { status: string; dueDate: Date; paidAt: Date | null }
+  payment: { status: string; dueDate: Date; paidAt: Date | null },
+  now: Date = new Date()
 ): "PAID" | "PENDING" | "OVERDUE" {
   if (payment.status === "PAID" || payment.paidAt) return "PAID";
   const cutoff = new Date(payment.dueDate);
   cutoff.setUTCDate(cutoff.getUTCDate() + OVERDUE_GRACE_DAYS);
-  if (new Date().getTime() > cutoff.getTime()) return "OVERDUE";
+  if (now.getTime() > cutoff.getTime()) return "OVERDUE";
   return "PENDING";
 }
 
@@ -121,14 +122,12 @@ export function computeDebt(
   };
   const unpaid = payments.filter(
     (p) =>
-      p.status !== "PAID" &&
-      p.paidAt === null &&
-      p.dueDate.getTime() <= now.getTime()
+      computeEffectiveStatus(p, now) !== "PAID" && p.dueDate.getTime() <= now.getTime()
   );
   if (unpaid.length === 0) return null;
 
   const latest = unpaid.reduce((a, b) => (a.dueDate > b.dueDate ? a : b));
-  const overdue = unpaid.some((p) => now.getTime() > graceEnd(p.dueDate).getTime());
+  const overdue = unpaid.some((p) => computeEffectiveStatus(p, now) === "OVERDUE");
   const graceDaysLeft = Math.max(
     0,
     Math.ceil((graceEnd(latest.dueDate).getTime() - now.getTime()) / 86_400_000)
