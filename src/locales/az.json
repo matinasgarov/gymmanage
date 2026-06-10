@@ -364,6 +364,8 @@
     "granted": "GİRİŞ İCAZƏLİDİR",
     "denied": "GİRİŞ QADAĞANDIR",
     "expiryLabel": "Bitmə:",
+    "debtLine": "Ödəniş gözlənilir: {amount}₼ · {period}",
+    "debtGrace": { "one": "{count} gün qalıb", "other": "{count} gün qalıb" },
     "tapToContinue": "Davam etmək üçün toxunun…",
     "overrideNote": "İcazənin səbəbi",
     "overrideApprove": "Yenə icazə ver",

@@ -222,7 +222,8 @@ function ResultOverlay(props: {
   const t = useT();
   const { result } = props;
   const granted = result.ok;
-  const bg = granted ? "bg-green-600" : "bg-red-600";
+  const debt = result.ok ? result.debt : undefined;
+  const bg = !granted ? "bg-red-600" : debt ? "bg-amber-500" : "bg-green-600";
   const photoUrl = result.ok ? result.member.photoUrl : result.member?.photoUrl;
 
   return (
@@ -249,6 +250,19 @@ function ResultOverlay(props: {
           <div className="text-sm opacity-90">
             {result.member.publicId} · {t("scan.expiryLabel")} {result.member.expiryDate}
           </div>
+          {debt && (
+            <div className="mt-3 bg-white/25 rounded-md px-4 py-2 w-full max-w-xs">
+              <div className="text-base font-semibold">
+                {t("scan.debtLine", {
+                  amount: debt.amount.toFixed(2),
+                  period: debt.periodLabel,
+                })}
+              </div>
+              <div className="text-sm opacity-90">
+                {t("scan.debtGrace", { count: debt.graceDaysLeft })}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <>

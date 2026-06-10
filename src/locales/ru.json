@@ -381,6 +381,8 @@
     "granted": "ВХОД РАЗРЕШЁН",
     "denied": "ВХОД ЗАПРЕЩЁН",
     "expiryLabel": "Истекает:",
+    "debtLine": "Ожидается оплата: {amount}₼ · {period}",
+    "debtGrace": { "one": "остался {count} день", "few": "осталось {count} дня", "many": "осталось {count} дней", "other": "осталось {count} дня" },
     "tapToContinue": "Нажмите, чтобы продолжить…",
     "overrideNote": "Причина разрешения",
     "overrideApprove": "Разрешить снова",
