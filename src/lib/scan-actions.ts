@@ -5,6 +5,7 @@ import type { GymDb } from "@/lib/tenant";
 import type { PlanType } from "@/generated/prisma/enums";
 import { parseScanToken, verifyScanToken } from "@/lib/qr";
 import { ensurePendingPayments, computeDebt, periodsThrough, type DebtSummary } from "@/lib/payments";
+import { DEFAULT_LOCALE } from "@/lib/i18n";
 import { verifyVisitorPassScan } from "@/lib/visitor-actions";
 
 export type ScanResult =
@@ -70,23 +71,29 @@ async function monthlyCapReached(
 // Debt gate shared by verifyScan and grantManualEntry: ensures payment rows
 // exist, then summarizes everything unpaid and due. OVERDUE → deny upstream;
 // PENDING (within grace) → grant with the debt attached.
+//
+// Deliberate behavior: the old code examined only the latest due payment;
+// this aggregates ALL unpaid periods and denies if any is past grace.
 async function assessPaymentDebt(
   db: GymDb,
   member: { id: string; planType: PlanType }
 ): Promise<DebtSummary | null> {
   await ensurePendingPayments(member.id);
+  const now = new Date();
   const rows = await db.payment.findMany({
     where: {
       memberId: member.id,
       status: { not: "PAID" },
       paidAt: null,
-      dueDate: { lte: new Date() },
+      dueDate: { lte: now },
     },
     select: { status: true, dueDate: true, paidAt: true, amount: true },
   });
   return computeDebt(
     rows.map((r) => ({ ...r, amount: Number(r.amount.toString()) })),
-    member.planType
+    member.planType,
+    DEFAULT_LOCALE,
+    now
   );
 }
 

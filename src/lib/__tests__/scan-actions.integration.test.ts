@@ -203,6 +203,20 @@ describe("scan-actions — grace entry with debt", () => {
     expect(granted).toBe(1);
   });
 
+  it("denies when an older period is past grace even though the latest is within it", async () => {
+    const gym = await seedGym();
+    const owner = await seedOwner(gym.id);
+    // startDate 32 days ago → two periods: one due 32 days ago (past grace),
+    // one due 2 days ago (within grace). Any past-grace period denies.
+    const member = await seedMember(gym.id, { startDate: new Date(Date.now() - 32 * DAY) });
+    await login(owner);
+    const { token } = signScanToken(member.id, member.qrSecret);
+
+    const res = await verifyScan(token);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toBe(REASON.payment);
+  });
+
   it("carries no debt payload when the current period is paid", async () => {
     const { member } = await activeMember();
     const { token } = signScanToken(member.id, member.qrSecret);

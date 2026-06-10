@@ -128,10 +128,9 @@ export function computeDebt(
 
   const latest = unpaid.reduce((a, b) => (a.dueDate > b.dueDate ? a : b));
   const overdue = unpaid.some((p) => computeEffectiveStatus(p, now) === "OVERDUE");
-  const graceDaysLeft = Math.max(
-    0,
-    Math.ceil((graceEnd(latest.dueDate).getTime() - now.getTime()) / 86_400_000)
-  );
+  const graceDaysLeft = overdue
+    ? 0
+    : Math.max(0, Math.ceil((graceEnd(latest.dueDate).getTime() - now.getTime()) / 86_400_000));
   return {
     amount: unpaid.reduce((s, p) => s + p.amount, 0),
     periodLabel: formatPeriodLabel(latest.dueDate, plan, locale),

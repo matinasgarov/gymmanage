@@ -139,6 +139,12 @@ describe("payments — computeDebt", () => {
     expect(d?.effective).toBe("OVERDUE");
   });
 
+  it("zeroes graceDaysLeft when an older period is overdue even if the latest is in grace", () => {
+    const d = computeDebt([pay(40), pay(2)], MONTHLY, "az", now);
+    expect(d?.effective).toBe("OVERDUE");
+    expect(d?.graceDaysLeft).toBe(0);
+  });
+
   it("ignores future-dated payments", () => {
     const future = {
       status: "PENDING",
