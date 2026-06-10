@@ -413,7 +413,12 @@
     "sendWhatsapp": "WhatsApp ilə göndər",
     "skip": "Atla",
     "viewProfile": "Profilə bax",
-    "advanceHint": "WhatsApp düyməsinə basanda növbəti üzvə keçəcək."
+    "advanceHint": "WhatsApp düyməsinə basanda növbəti üzvə keçəcək.",
+    "summaryTitle": "Bu gün yığılacaq",
+    "summaryValue": "{amount}₼ · {people} nəfər",
+    "group": { "overdue": "Borclu", "dueNow": "Ödəniş vaxtıdır", "expiring": "Üzvlük bitir" },
+    "statExpiry": "Bitmə",
+    "statDaysLeft": "Qalıb"
   },
   "leads": {
     "title": "Müraciətlər",

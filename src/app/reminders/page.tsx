@@ -9,13 +9,16 @@ import { OVERDUE_GRACE_DAYS } from "@/lib/payments";
 export default async function RemindersPage() {
   const { user, db } = await getOwnerDb();
   const t = await getT();
-  const cutoff = new Date();
-  cutoff.setUTCDate(cutoff.getUTCDate() - OVERDUE_GRACE_DAYS);
+  const now = new Date();
+  const weekAhead = new Date(now);
+  weekAhead.setUTCDate(weekAhead.getUTCDate() + 7);
 
-  const payments = await db.payment.findMany({
+  // Groups 1+2: every unpaid payment due so far (overdue AND within-grace).
+  const unpaid = await db.payment.findMany({
     where: {
       status: { not: "PAID" },
-      dueDate: { lte: cutoff },
+      paidAt: null,
+      dueDate: { lte: now },
       member: { status: { notIn: ["CANCELLED", "FROZEN"] } },
     },
     orderBy: { dueDate: "asc" },
@@ -24,16 +27,50 @@ export default async function RemindersPage() {
     },
     take: 200,
   });
+  const withMember = unpaid.filter(
+    (p): p is typeof p & { member: NonNullable<(typeof p)["member"]> } => p.member !== null
+  );
 
-  const items: ReminderItem[] = payments
-    .filter((p): p is typeof p & { member: NonNullable<(typeof p)["member"]> } => p.member !== null)
-    .map((p) => ({
+  const paymentItems: ReminderItem[] = withMember.map((p) => {
+    const daysLate = Math.floor((now.getTime() - p.dueDate.getTime()) / 86_400_000);
+    return {
+      group: daysLate > OVERDUE_GRACE_DAYS ? ("overdue" as const) : ("dueNow" as const),
       paymentId: p.id,
       period: p.period,
       amount: Number(p.amount.toString()),
-      daysLate: Math.floor((Date.now() - p.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
+      daysLate,
       member: p.member,
-    }));
+    };
+  });
+
+  // Group 3: expiring within 7 days with no open debt (debtors are in groups 1–2).
+  const debtorIds = [...new Set(withMember.map((p) => p.member.id))];
+  const expiring = await db.member.findMany({
+    where: {
+      status: "ACTIVE",
+      expiryDate: { gte: now, lte: weekAhead },
+      id: { notIn: debtorIds },
+    },
+    orderBy: { expiryDate: "asc" },
+    select: { id: true, name: true, phone: true, publicId: true, expiryDate: true },
+    take: 100,
+  });
+  const expiringItems: ReminderItem[] = expiring.map((m) => ({
+    group: "expiring" as const,
+    daysLeft: Math.max(0, Math.ceil((m.expiryDate.getTime() - now.getTime()) / 86_400_000)),
+    expiryDate: m.expiryDate.toISOString().slice(0, 10),
+    member: { id: m.id, name: m.name, phone: m.phone, publicId: m.publicId },
+  }));
+
+  const items: ReminderItem[] = [
+    ...paymentItems.filter((i) => i.group === "overdue"),
+    ...paymentItems.filter((i) => i.group === "dueNow"),
+    ...expiringItems,
+  ];
+  const summary = {
+    amount: paymentItems.reduce((s, i) => s + (i.amount ?? 0), 0),
+    people: new Set(items.map((i) => i.member.id)).size,
+  };
 
   return (
     <AppShell>
@@ -48,6 +85,8 @@ export default async function RemindersPage() {
           items={items}
           gymName={user.gym.name}
           reminderTemplate={user.gym.waReminderTemplate}
+          expiringTemplate={user.gym.waExpiringTemplate}
+          summary={summary}
         />
       </div>
     </AppShell>

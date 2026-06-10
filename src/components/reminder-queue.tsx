@@ -8,10 +8,15 @@ import { buildWaUrl, pickTemplate, renderTemplate } from "@/lib/templates";
 import { useT } from "@/components/i18n-provider";
 
 export type ReminderItem = {
-  paymentId: string;
-  period: string;
-  amount: number;
-  daysLate: number;
+  group: "overdue" | "dueNow" | "expiring";
+  // payment groups (overdue / dueNow)
+  paymentId?: string;
+  period?: string;
+  amount?: number;
+  daysLate?: number;
+  // expiring group
+  daysLeft?: number;
+  expiryDate?: string;
   member: { id: string; name: string; phone: string; publicId: string };
 };
 
@@ -19,10 +24,14 @@ export function ReminderQueue({
   items,
   gymName,
   reminderTemplate,
+  expiringTemplate,
+  summary,
 }: {
   items: ReminderItem[];
   gymName: string;
   reminderTemplate: string | null;
+  expiringTemplate: string | null;
+  summary: { amount: number; people: number };
 }) {
   const t = useT();
   const [index, setIndex] = useState(0);
@@ -35,15 +44,25 @@ export function ReminderQueue({
 
   const waUrl = useMemo(() => {
     if (!current) return "";
+    if (current.group === "expiring") {
+      const tmpl = pickTemplate("expiring", expiringTemplate);
+      const msg = renderTemplate(tmpl, {
+        memberName: current.member.name,
+        gymName,
+        daysLeft: current.daysLeft ?? 0,
+        expiryDate: current.expiryDate ?? "",
+      });
+      return buildWaUrl(current.member.phone, msg);
+    }
     const tmpl = pickTemplate("reminder", reminderTemplate);
     const msg = renderTemplate(tmpl, {
       memberName: current.member.name,
       gymName,
-      period: current.period,
-      amount: `${current.amount.toFixed(2)}₼`,
+      period: current.period ?? "",
+      amount: `${(current.amount ?? 0).toFixed(2)}₼`,
     });
     return buildWaUrl(current.member.phone, msg);
-  }, [current, gymName, reminderTemplate]);
+  }, [current, gymName, reminderTemplate, expiringTemplate]);
 
   if (total === 0) {
     return (
@@ -78,12 +97,12 @@ export function ReminderQueue({
   }
 
   const onSent = async () => {
-    void recordReminderSent(current.paymentId, "whatsapp");
+    if (current.paymentId) void recordReminderSent(current.paymentId, "whatsapp");
     setSentCount((n) => n + 1);
     setIndex((i) => i + 1);
   };
   const onSkip = async () => {
-    void recordReminderSent(current.paymentId, "skip");
+    if (current.paymentId) void recordReminderSent(current.paymentId, "skip");
     setSkippedCount((n) => n + 1);
     setIndex((i) => i + 1);
   };
@@ -92,6 +111,18 @@ export function ReminderQueue({
 
   return (
     <div className="max-w-md mx-auto space-y-4">
+      {summary.amount > 0 && (
+        <div className="card px-4 py-3 flex items-center justify-between">
+          <span className="text-sm font-medium">{t("reminders.summaryTitle")}</span>
+          <span className="text-sm font-semibold">
+            {t("reminders.summaryValue", {
+              amount: summary.amount.toFixed(2),
+              people: summary.people,
+            })}
+          </span>
+        </div>
+      )}
+
       <div>
         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1.5">
           <span>
@@ -110,6 +141,18 @@ export function ReminderQueue({
       </div>
 
       <div className="card p-6 text-center">
+        <span
+          className={`inline-block text-[11px] px-2 py-0.5 rounded-full mb-3 ${
+            current.group === "overdue"
+              ? "bg-red-50 text-red-700"
+              : current.group === "dueNow"
+                ? "bg-amber-50 text-amber-700"
+                : "bg-blue-50 text-blue-700"
+          }`}
+        >
+          {t(`reminders.group.${current.group}`)}
+        </span>
+
         <div className="w-16 h-16 mx-auto rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center text-2xl font-semibold mb-3">
           {current.member.name.slice(0, 1).toUpperCase()}
         </div>
@@ -118,14 +161,27 @@ export function ReminderQueue({
           {current.member.publicId} · {current.member.phone}
         </p>
 
-        <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
-          <Stat label={t("reminders.statPeriod")} value={current.period} />
-          <Stat label={t("reminders.statAmount")} value={`${current.amount.toFixed(2)}₼`} />
-          <Stat
-            label={t("reminders.statDelay")}
-            value={t("units.days", { count: current.daysLate })}
-          />
-        </div>
+        {current.group === "expiring" ? (
+          <div className="grid grid-cols-2 gap-2 mt-4 text-sm">
+            <Stat label={t("reminders.statExpiry")} value={current.expiryDate ?? ""} />
+            <Stat
+              label={t("reminders.statDaysLeft")}
+              value={t("units.days", { count: current.daysLeft ?? 0 })}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
+            <Stat label={t("reminders.statPeriod")} value={current.period ?? ""} />
+            <Stat
+              label={t("reminders.statAmount")}
+              value={`${(current.amount ?? 0).toFixed(2)}₼`}
+            />
+            <Stat
+              label={t("reminders.statDelay")}
+              value={t("units.days", { count: current.daysLate ?? 0 })}
+            />
+          </div>
+        )}
 
         <a
           href={waUrl}

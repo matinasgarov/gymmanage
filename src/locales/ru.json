@@ -430,7 +430,12 @@
     "sendWhatsapp": "Отправить в WhatsApp",
     "skip": "Пропустить",
     "viewProfile": "Профиль",
-    "advanceHint": "После нажатия WhatsApp перейдёт к следующему участнику."
+    "advanceHint": "После нажатия WhatsApp перейдёт к следующему участнику.",
+    "summaryTitle": "Собрать сегодня",
+    "summaryValue": "{amount}₼ · {people} чел.",
+    "group": { "overdue": "Должник", "dueNow": "Срок оплаты", "expiring": "Абонемент истекает" },
+    "statExpiry": "Истекает",
+    "statDaysLeft": "Осталось"
   },
   "leads": {
     "title": "Заявки",
