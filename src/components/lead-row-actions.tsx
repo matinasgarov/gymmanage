@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { UserPlus, Phone, X, Trash2 } from "lucide-react";
 import { setLeadStatus, deleteLead } from "@/lib/lead-actions";
+import { useT } from "@/components/i18n-provider";
 
 export function LeadRowActions({
   leadId,
@@ -14,6 +15,7 @@ export function LeadRowActions({
   status: string;
   convertedMemberId: string | null;
 }) {
+  const t = useT();
   const [pending, start] = useTransition();
 
   if (status === "CONVERTED" && convertedMemberId) {
@@ -22,7 +24,7 @@ export function LeadRowActions({
         href={`/members/${convertedMemberId}`}
         className="text-xs text-emerald-700 underline shrink-0"
       >
-        Üzvə bax →
+        {t("leads.viewMember")}
       </Link>
     );
   }
@@ -34,7 +36,7 @@ export function LeadRowActions({
         className="inline-flex items-center gap-1 text-xs bg-[var(--brand)] hover:bg-[var(--brand-strong)] text-white rounded-full px-3 py-1.5 font-medium"
       >
         <UserPlus className="w-3 h-3" />
-        Üzv yarat
+        {t("leads.createMember")}
       </Link>
       {status !== "CONTACTED" && (
         <button
@@ -44,7 +46,7 @@ export function LeadRowActions({
           className="inline-flex items-center gap-1 text-xs btn-ghost"
         >
           <Phone className="w-3 h-3" />
-          Əlaqə saxlandı
+          {t("leads.markContacted")}
         </button>
       )}
       {status !== "LOST" && (
@@ -55,7 +57,7 @@ export function LeadRowActions({
           className="inline-flex items-center gap-1 text-xs btn-ghost"
         >
           <X className="w-3 h-3" />
-          İtirildi
+          {t("leads.markLost")}
         </button>
       )}
       <button
@@ -63,8 +65,8 @@ export function LeadRowActions({
         onClick={() => start(() => deleteLead(leadId))}
         disabled={pending}
         className="inline-flex items-center gap-1 text-xs text-red-600 hover:bg-red-50 rounded-full px-2 py-1.5"
-        title="Sil"
-        aria-label="Sil"
+        title={t("common.delete")}
+        aria-label={t("common.delete")}
       >
         <Trash2 className="w-3 h-3" />
       </button>

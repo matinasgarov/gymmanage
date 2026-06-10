@@ -11,6 +11,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { getDashboard, waReminderUrl } from "@/lib/dashboard";
 import { formatAZN } from "@/lib/members";
 import { RevenueChart } from "@/components/revenue-chart";
@@ -25,6 +26,7 @@ function daysUntil(d: Date) {
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
+  const t = await getT();
   const data = await getDashboard(user.gymId);
 
   const atRiskCount = data.atRisk.ghosters + data.atRisk.lapsers;
@@ -34,13 +36,13 @@ export default async function DashboardPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Panel"
+        title={t("nav.dashboard")}
         subtitle={user.gym.name}
         icon={LayoutDashboard}
         tone="dark"
         actions={
           <Link href="/members/new" className="btn-brand hidden sm:inline-flex items-center gap-2">
-            <span>+ Yeni üzv</span>
+            <span>{t("dashboard.newMember")}</span>
           </Link>
         }
       />
@@ -55,7 +57,7 @@ export default async function DashboardPage() {
                 className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] px-3.5 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
               >
                 <Inbox className="w-4 h-4" />
-                {data.newLeadsCount} yeni müraciət
+                {t("dashboard.newLeads", { count: data.newLeadsCount })}
                 <span aria-hidden>→</span>
               </Link>
             )}
@@ -65,7 +67,7 @@ export default async function DashboardPage() {
                 className="inline-flex items-center gap-2 rounded-full bg-red-50 text-[var(--signal-danger)] px-3.5 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
               >
                 <HeartPulse className="w-4 h-4" />
-                {atRiskCount} üzv risk altında
+                {t("dashboard.atRisk", { count: atRiskCount })}
                 <span aria-hidden>→</span>
               </Link>
             )}
@@ -77,11 +79,11 @@ export default async function DashboardPage() {
           <div className="card p-5 flex flex-col">
             <div className="flex items-center justify-between">
               <span className="text-[11px] uppercase tracking-wide text-[var(--muted)]">
-                Bu gün giriş
+                {t("dashboard.todayCheckins")}
               </span>
               <span className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
                 <span className="pulse-dot" />
-                canlı
+                {t("dashboard.live")}
               </span>
             </div>
             <div className="mt-2 flex-1 flex items-end">
@@ -90,20 +92,20 @@ export default async function DashboardPage() {
                   {data.todayCheckIns}
                 </div>
               ) : (
-                <div className="text-lg text-[var(--muted)] py-3">Hələ giriş yoxdur</div>
+                <div className="text-lg text-[var(--muted)] py-3">{t("dashboard.noCheckinsYet")}</div>
               )}
             </div>
             <Link
               href="/scan"
               className="mt-4 inline-flex items-center gap-1 text-sm text-[var(--brand-strong)] transition-all hover:gap-2"
             >
-              Skanerə keç <span aria-hidden>→</span>
+              {t("dashboard.goToScanner")} <span aria-hidden>→</span>
             </Link>
           </div>
 
           <div className="card p-5 flex flex-col">
             <span className="text-[11px] uppercase tracking-wide text-[var(--muted)]">
-              Bu ay gəlir
+              {t("dashboard.monthRevenue")}
             </span>
             <div className="mt-2 flex-1 flex flex-col justify-center">
               <MonthlyGoalProgress
@@ -117,26 +119,26 @@ export default async function DashboardPage() {
 
         {/* TIER 3 — secondary stat strip. Neutral by default; color only on abnormal data. */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <MiniStat label="Aktiv üzvlər" value={String(data.activeCount)} icon={Users} signal="neutral" />
+          <MiniStat label={t("dashboard.activeMembers")} value={String(data.activeCount)} icon={Users} signal="neutral" />
           <MiniStat
-            label="Borclu"
+            label={t("dashboard.overdue")}
             value={String(data.overdueCount)}
             icon={AlertTriangle}
             signal={data.overdueCount > 0 ? "danger" : "neutral"}
             href={data.overdueCount > 0 ? "/payments?filter=unpaid" : undefined}
           />
           <MiniStat
-            label="Bu həftə bitir"
+            label={t("dashboard.expiringThisWeek")}
             value={String(data.expiringCount)}
             icon={CalendarClock}
             signal={data.expiringCount > 0 ? "warn" : "neutral"}
           />
           <MiniStat
-            label="Churn (bu ay)"
+            label={t("dashboard.churn")}
             value={`${data.churnRate.toFixed(1)}%`}
             icon={TrendingDown}
             signal={churnSignal}
-            sub={`${data.cancelledThisMonth}/${data.activeAtMonthStart} üzv`}
+            sub={t("dashboard.churnSub", { cancelled: data.cancelledThisMonth, active: data.activeAtMonthStart })}
           />
         </section>
 
@@ -148,17 +150,17 @@ export default async function DashboardPage() {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-medium">Borclu üzvlər</h2>
+              <h2 className="font-medium">{t("dashboard.overdueMembers")}</h2>
               <span
                 className={`text-xs ${
                   data.overdueCount > 0 ? "text-[var(--signal-danger)]" : "text-[var(--muted)]"
                 }`}
               >
-                {data.overdueCount} nəfər
+                {t("units.people", { count: data.overdueCount })}
               </span>
             </div>
             {data.overdueMembers.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">Borclu yoxdur 🎉</p>
+              <p className="text-sm text-[var(--muted)]">{t("dashboard.noOverdue")}</p>
             ) : (
               <ul className="divide-y divide-[var(--border)]">
                 {data.overdueMembers.slice(0, 5).map((p) => {
@@ -177,7 +179,7 @@ export default async function DashboardPage() {
                         rel="noopener noreferrer"
                         className="text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-3 py-1 shrink-0"
                       >
-                        WhatsApp
+                        {t("common.whatsapp")}
                       </a>
                     </li>
                   );
@@ -186,24 +188,24 @@ export default async function DashboardPage() {
             )}
             {data.overdueCount > 0 && (
               <Link href="/reminders" className="block text-center btn-brand mt-3">
-                Toplu xatırlatma →
+                {t("dashboard.bulkReminder")}
               </Link>
             )}
           </div>
 
           <div className="card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-medium">Bu həftə üzvlüyü bitir</h2>
+              <h2 className="font-medium">{t("dashboard.expiringTitle")}</h2>
               <span
                 className={`text-xs ${
                   data.expiringCount > 0 ? "text-[var(--signal-warn)]" : "text-[var(--muted)]"
                 }`}
               >
-                {data.expiringCount} nəfər
+                {t("units.people", { count: data.expiringCount })}
               </span>
             </div>
             {data.expiringMembers.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">Bu həftə bitən üzvlük yoxdur.</p>
+              <p className="text-sm text-[var(--muted)]">{t("dashboard.noExpiring")}</p>
             ) : (
               <ul className="divide-y divide-[var(--border)]">
                 {data.expiringMembers.map((m) => {
@@ -228,7 +230,7 @@ export default async function DashboardPage() {
                               : "text-[var(--muted)] bg-slate-100"
                           }`}
                         >
-                          {d} gün
+                          {t("units.days", { count: d })}
                         </span>
                       </Link>
                     </li>

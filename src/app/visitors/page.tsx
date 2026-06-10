@@ -2,8 +2,8 @@ import { UserCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getOwnerDb } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { formatAZN } from "@/lib/members";
-import { PAY_METHOD_LABEL as PAY_METHOD } from "@/lib/labels";
 
 function fmtDateTime(d: Date) {
   return d.toISOString().replace("T", " ").slice(0, 16);
@@ -11,6 +11,7 @@ function fmtDateTime(d: Date) {
 
 export default async function VisitorsPage() {
   const { db } = await getOwnerDb();
+  const t = await getT();
 
   const passes = await db.visitorPass.findMany({
     orderBy: { createdAt: "desc" },
@@ -23,8 +24,8 @@ export default async function VisitorsPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Qonaqlar"
-        subtitle="Birgünlük və günlük QR girişləri"
+        title={t("visitors.title")}
+        subtitle={t("visitors.subtitle")}
         icon={UserCheck}
         tone="dark"
       />
@@ -32,9 +33,7 @@ export default async function VisitorsPage() {
         {passes.length === 0 ? (
           <div className="card p-10 text-center">
             <UserCheck className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--muted)]">
-              Hələ qonaq girişi yoxdur. Skaner səhifəsindən əlavə edə bilərsiniz.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("visitors.noVisitors")}</p>
           </div>
         ) : (
           <div className="card divide-y divide-[var(--border)]">
@@ -49,31 +48,33 @@ export default async function VisitorsPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">
-                        {p.name ?? "Qonaq"}
+                        {p.name ?? t("visitors.anonymous")}
                       </span>
                       <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full ${isDayPass ? "bg-sky-100 text-sky-700" : "bg-emerald-100 text-emerald-700"}`}
+                        className={`text-[11px] px-2 py-0.5 rounded-full ${
+                          isDayPass
+                            ? "bg-sky-100 text-sky-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
                       >
-                        {isDayPass ? "Günlük QR" : "Tez giriş"}
+                        {isDayPass ? t("visitors.typeDayPass") : t("visitors.typeQuickEntry")}
                       </span>
                       {isDayPass && expired && (
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                          Vaxtı keçib
+                          {t("visitors.expired")}
                         </span>
                       )}
                     </div>
                     <div className="text-[11px] text-[var(--muted)] mt-0.5">
-                      {fmtDateTime(p.createdAt)} · {PAY_METHOD[p.method]}
+                      {fmtDateTime(p.createdAt)} · {t(`method.${p.method}`)}
                       {p.phone ? ` · ${p.phone}` : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-xs text-[var(--muted)]">
-                      {p._count.checkIns} giriş
+                      {t("units.entries", { count: p._count.checkIns })}
                     </span>
-                    <span className="text-sm font-medium">
-                      {formatAZN(p.amount)}
-                    </span>
+                    <span className="text-sm font-medium">{formatAZN(p.amount)}</span>
                   </div>
                 </div>
               );

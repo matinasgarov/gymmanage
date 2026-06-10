@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateGymProfile, type SettingsState } from "@/lib/settings-actions";
+import { useT } from "@/components/i18n-provider";
 
 const initial: SettingsState = undefined;
 
@@ -10,17 +11,18 @@ export function ProfileForm({
 }: {
   defaults: { name: string; ownerName: string; phone: string; address: string };
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState(updateGymProfile, initial);
 
   return (
     <form action={action} className="space-y-3">
-      <Field label="Zalın adı" name="name" defaultValue={defaults.name} errors={state?.errors?.name} />
-      <Field label="Sahibin adı" name="ownerName" defaultValue={defaults.ownerName} errors={state?.errors?.ownerName} />
-      <Field label="Telefon" name="phone" type="tel" defaultValue={defaults.phone} errors={state?.errors?.phone} />
-      <Field label="Ünvan (ixtiyari)" name="address" defaultValue={defaults.address} errors={state?.errors?.address} />
+      <Field label={t("settings.gymName")} name="name" defaultValue={defaults.name} errors={state?.errors?.name} />
+      <Field label={t("settings.ownerName")} name="ownerName" defaultValue={defaults.ownerName} errors={state?.errors?.ownerName} />
+      <Field label={t("memberForm.phone")} name="phone" type="tel" defaultValue={defaults.phone} errors={state?.errors?.phone} />
+      <Field label={t("settings.address")} name="address" defaultValue={defaults.address} errors={state?.errors?.address} />
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending} className="btn-brand">
-          {pending ? "Saxlanılır…" : "Yadda saxla"}
+          {pending ? t("common.saving") : t("settings.saveProfile")}
         </button>
         {state?.ok && state.message && (
           <span className="text-xs text-emerald-700">{state.message}</span>

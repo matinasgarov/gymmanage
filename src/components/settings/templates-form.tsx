@@ -2,12 +2,8 @@
 
 import { useActionState } from "react";
 import { updateGymTemplates, type SettingsState } from "@/lib/settings-actions";
-import {
-  DEFAULT_TEMPLATES,
-  TEMPLATE_LABELS,
-  TEMPLATE_PLACEHOLDERS,
-  type TemplateKey,
-} from "@/lib/templates";
+import { DEFAULT_TEMPLATES, TEMPLATE_PLACEHOLDERS, type TemplateKey } from "@/lib/templates";
+import { useT } from "@/components/i18n-provider";
 
 const initial: SettingsState = undefined;
 
@@ -18,11 +14,15 @@ const FIELDS: { key: TemplateKey; name: string }[] = [
   { key: "welcome", name: "waWelcomeTemplate" },
 ];
 
-export function TemplatesForm({
-  defaults,
-}: {
-  defaults: Record<string, string>;
-}) {
+const LABEL_KEY: Record<TemplateKey, string> = {
+  reminder: "settings.templateReminder",
+  receipt: "settings.templateReceipt",
+  expiring: "settings.templateExpiring",
+  welcome: "settings.templateWelcome",
+};
+
+export function TemplatesForm({ defaults }: { defaults: Record<string, string> }) {
+  const t = useT();
   const [state, action, pending] = useActionState(updateGymTemplates, initial);
 
   return (
@@ -30,7 +30,7 @@ export function TemplatesForm({
       {FIELDS.map((f) => (
         <div key={f.key}>
           <label htmlFor={f.name} className="block text-sm font-medium mb-1">
-            {TEMPLATE_LABELS[f.key]}
+            {t(LABEL_KEY[f.key])}
           </label>
           <textarea
             id={f.name}
@@ -41,13 +41,13 @@ export function TemplatesForm({
             className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm"
           />
           <p className="text-[11px] text-[var(--muted)] mt-1">
-            Yer tutucular: {TEMPLATE_PLACEHOLDERS[f.key].join(", ")}
+            {t("settings.templatePlaceholders")} {TEMPLATE_PLACEHOLDERS[f.key].join(", ")}
           </p>
         </div>
       ))}
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending} className="btn-brand">
-          {pending ? "Saxlanılır…" : "Şablonları yadda saxla"}
+          {pending ? t("common.saving") : t("settings.saveTemplates")}
         </button>
         {state?.ok && state.message && (
           <span className="text-xs text-emerald-700">{state.message}</span>

@@ -205,6 +205,8 @@ model User {
   name         String
   role         UserRole @default(STAFF)
   active       Boolean  @default(true)
+  // UI language preference ("az" | "ru"). null = fall back to cookie / gym locale.
+  locale       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -301,7 +303,10 @@ model Member {
 
 model Payment {
   id           String         @id @default(cuid())
-  memberId     String
+  // Nullable so a paid payment survives the member being deleted (SetNull). A
+  // collected payment is a financial fact about the gym, not just the member —
+  // deleting a member must not silently erase past revenue.
+  memberId     String?
   gymId        String
   amount       Decimal        @db.Decimal(10, 2)
   // Period this payment covers, e.g. "2026-05" for May 2026
@@ -313,10 +318,16 @@ model Payment {
   recordedById String?
   // Optional uploaded transfer-screenshot URL
   receiptUrl   String?
+  // Snapshots taken when the member is deleted but payments are kept, so the
+  // orphaned row still shows a name and keeps correct period labels / revenue
+  // attribution. Null while the member still exists (read live from the relation).
+  memberName     String?
+  memberPublicId String?
+  memberPlanType PlanType?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  member     Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member     Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
   gym        Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
   recordedBy User?  @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
 

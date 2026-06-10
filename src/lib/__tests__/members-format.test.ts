@@ -5,8 +5,12 @@ import {
   lastSeenLabel,
   shortDate,
 } from "@/lib/members-format";
+import { createT, getDictionary } from "@/lib/i18n";
 
 const DAY = 24 * 60 * 60 * 1000;
+
+// Azerbaijani translator so the existing AZ label assertions hold.
+const t = createT(getDictionary("az"), "az");
 
 // Pin "now" so day-relative assertions are deterministic. Only Date is faked
 // (timers/promises stay real for async mocks elsewhere).
@@ -49,15 +53,15 @@ describe("effectiveMemberStatus — derives EXPIRED from expiryDate", () => {
 
 describe("expiryInfo — countdown + muted-palette tone", () => {
   it("is danger + 'Bitib' once expired", () => {
-    expect(expiryInfo(new Date(Date.now() - 2 * DAY))).toMatchObject({
+    expect(expiryInfo(new Date(Date.now() - 2 * DAY), t)).toMatchObject({
       tone: "danger",
       label: "Bitib",
     });
   });
 
   it("warns on the day of and within a week", () => {
-    expect(expiryInfo(new Date())).toMatchObject({ tone: "warn", label: "Bu gün", days: 0 });
-    expect(expiryInfo(new Date(Date.now() + 3 * DAY))).toMatchObject({
+    expect(expiryInfo(new Date(), t)).toMatchObject({ tone: "warn", label: "Bu gün", days: 0 });
+    expect(expiryInfo(new Date(Date.now() + 3 * DAY), t)).toMatchObject({
       tone: "warn",
       label: "3 gün",
       days: 3,
@@ -65,7 +69,7 @@ describe("expiryInfo — countdown + muted-palette tone", () => {
   });
 
   it("is neutral when more than a week out", () => {
-    expect(expiryInfo(new Date(Date.now() + 20 * DAY))).toMatchObject({
+    expect(expiryInfo(new Date(Date.now() + 20 * DAY), t)).toMatchObject({
       tone: "neutral",
       label: "20 gün",
       days: 20,
@@ -75,10 +79,10 @@ describe("expiryInfo — countdown + muted-palette tone", () => {
 
 describe("lastSeenLabel — relative last check-in", () => {
   it("handles never / today / yesterday / N days ago", () => {
-    expect(lastSeenLabel(null)).toBe("Heç vaxt");
-    expect(lastSeenLabel(new Date())).toBe("Bu gün");
-    expect(lastSeenLabel(new Date(Date.now() - 1 * DAY))).toBe("Dünən");
-    expect(lastSeenLabel(new Date(Date.now() - 5 * DAY))).toBe("5 gün əvvəl");
+    expect(lastSeenLabel(null, t)).toBe("Heç vaxt");
+    expect(lastSeenLabel(new Date(), t)).toBe("Bu gün");
+    expect(lastSeenLabel(new Date(Date.now() - 1 * DAY), t)).toBe("Dünən");
+    expect(lastSeenLabel(new Date(Date.now() - 5 * DAY), t)).toBe("5 gün əvvəl");
   });
 });
 

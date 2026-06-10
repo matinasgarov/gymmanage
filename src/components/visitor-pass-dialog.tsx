@@ -7,6 +7,7 @@ import {
   issueDayPass,
   type VisitorFormState,
 } from "@/lib/visitor-actions";
+import { useT } from "@/components/i18n-provider";
 
 const initial: VisitorFormState = undefined;
 
@@ -19,6 +20,7 @@ export function VisitorPassDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useT();
   const action = mode === "quick" ? recordQuickVisit : issueDayPass;
   const [state, formAction, pending] = useActionState(action, initial);
   const [copied, setCopied] = useState(false);
@@ -38,17 +40,23 @@ export function VisitorPassDialog({
       : state?.passUrl ?? "";
 
   const waUrl = fullUrl
-    ? `https://wa.me/?text=${encodeURIComponent(`Bugünki giriş kartınız: ${fullUrl}`)}`
+    ? `https://wa.me/?text=${encodeURIComponent(t("scan.waPassMessage", { url: fullUrl }))}`
     : "";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={close}>
-      <div className="bg-white rounded-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      onClick={close}
+    >
+      <div
+        className="bg-white rounded-xl w-full max-w-md p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">
-            {mode === "quick" ? "Tez giriş" : "Günlük QR yarat"}
+            {mode === "quick" ? t("scan.quickEntry") : t("scan.daypassCreate")}
           </h3>
-          <button onClick={close} className="p-1 -mr-1" aria-label="Bağla">
+          <button onClick={close} className="p-1 -mr-1" aria-label={t("common.close")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -56,7 +64,7 @@ export function VisitorPassDialog({
         {!isSuccess ? (
           <form action={formAction} className="space-y-3">
             <Field
-              label="Məbləğ (₼)"
+              label={t("scan.amount")}
               name="amount"
               type="number"
               step="0.01"
@@ -65,7 +73,7 @@ export function VisitorPassDialog({
             />
             <div>
               <label htmlFor="method" className="block text-sm font-medium mb-1">
-                Ödəniş üsulu
+                {t("scan.payMethod")}
               </label>
               <select
                 id="method"
@@ -73,19 +81,19 @@ export function VisitorPassDialog({
                 defaultValue="CASH"
                 className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-white text-sm"
               >
-                <option value="CASH">Nağd</option>
-                <option value="CARD">Kart</option>
-                <option value="TRANSFER">Köçürmə</option>
+                <option value="CASH">{t("method.CASH")}</option>
+                <option value="CARD">{t("method.CARD")}</option>
+                <option value="TRANSFER">{t("method.TRANSFER")}</option>
               </select>
             </div>
             <Field
-              label="Ad (ixtiyari)"
+              label={t("scan.guestName")}
               name="name"
-              placeholder="Qonağın adı"
+              placeholder={t("scan.guestNamePlaceholder")}
               errors={state?.errors?.name}
             />
             <Field
-              label="Telefon (ixtiyari)"
+              label={t("scan.guestPhone")}
               name="phone"
               type="tel"
               placeholder="+994501234567"
@@ -94,19 +102,19 @@ export function VisitorPassDialog({
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={close} className="btn-ghost">
-                Geri
+                {t("scan.back")}
               </button>
               <button type="submit" disabled={pending} className="btn-brand">
                 {pending
-                  ? "Saxlanılır…"
+                  ? t("common.saving")
                   : mode === "quick"
-                    ? "Giriş ver"
-                    : "QR yarat"}
+                    ? t("scan.submit")
+                    : t("scan.submitDaypass")}
               </button>
             </div>
           </form>
         ) : mode === "quick" ? (
-          <SuccessOk message={state?.message ?? "Giriş qeydə alındı"} onClose={close} />
+          <SuccessOk message={state?.message ?? ""} onClose={close} />
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-emerald-700">{state?.message}</p>
@@ -128,7 +136,7 @@ export function VisitorPassDialog({
                 rel="noopener noreferrer"
                 className="btn-ghost inline-flex items-center gap-1.5"
               >
-                <ExternalLink className="w-3.5 h-3.5" /> Aç
+                <ExternalLink className="w-3.5 h-3.5" /> {t("scan.open")}
               </a>
               <button
                 type="button"
@@ -138,12 +146,12 @@ export function VisitorPassDialog({
                 }}
                 className="btn-ghost inline-flex items-center gap-1.5"
               >
-                <Copy className="w-3.5 h-3.5" /> {copied ? "Kopyalandı" : "Kopyala"}
+                <Copy className="w-3.5 h-3.5" /> {copied ? t("scan.copied") : t("scan.copy")}
               </button>
             </div>
             <div className="flex justify-end pt-2">
               <button type="button" onClick={close} className="btn-brand">
-                Bitir
+                {t("scan.finish")}
               </button>
             </div>
           </div>
@@ -154,12 +162,13 @@ export function VisitorPassDialog({
 }
 
 function SuccessOk({ message, onClose }: { message: string; onClose: () => void }) {
+  const t = useT();
   return (
     <div className="text-center py-6">
       <div className="text-4xl mb-2">✓</div>
       <p className="text-sm text-emerald-700 mb-4">{message}</p>
       <button onClick={onClose} className="btn-brand">
-        Bağla
+        {t("common.close")}
       </button>
     </div>
   );

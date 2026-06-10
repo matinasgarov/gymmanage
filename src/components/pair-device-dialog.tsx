@@ -8,6 +8,7 @@ import {
   regeneratePairing,
   type PairingResult,
 } from "@/lib/scanner-device-actions";
+import { useT } from "@/components/i18n-provider";
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return "0:00";
@@ -18,6 +19,7 @@ function fmtCountdown(ms: number): string {
 }
 
 export function PairDeviceDialog({ origin }: { origin: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [pairing, setPairing] = useState<
@@ -29,8 +31,8 @@ export function PairDeviceDialog({ origin }: { origin: string }) {
 
   useEffect(() => {
     if (!pairing) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, [pairing]);
 
   function start() {
@@ -78,7 +80,7 @@ export function PairDeviceDialog({ origin }: { origin: string }) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-brand">
-        + Yeni cihaz əlavə et
+        {t("settings.devicesAdd")}
       </button>
     );
   }
@@ -91,20 +93,20 @@ export function PairDeviceDialog({ origin }: { origin: string }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
       <div className="card w-full max-w-md p-5 space-y-4 bg-[var(--card)]">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Skaner cihazını qoş</h2>
-          <button onClick={close} aria-label="Bağla">
+          <h2 className="font-medium">{t("settings.devicesPairTitle")}</h2>
+          <button onClick={close} aria-label={t("common.close")}>
             <X className="w-4 h-4 text-[var(--muted)]" />
           </button>
         </div>
 
         {!pairing && (
           <>
-            <label className="block text-sm font-medium">Cihazın adı</label>
+            <label className="block text-sm font-medium">{t("settings.deviceName")}</label>
             <input
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Qapı telefonu"
+              placeholder={t("settings.deviceNamePlaceholder")}
               className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -113,16 +115,14 @@ export function PairDeviceDialog({ origin }: { origin: string }) {
               disabled={isPending || name.trim().length < 2}
               className="btn-brand w-full"
             >
-              {isPending ? "Yaradılır..." : "Davam et"}
+              {isPending ? t("settings.deviceCreating") : t("settings.deviceContinue")}
             </button>
           </>
         )}
 
         {pairing && (
           <>
-            <p className="text-sm text-[var(--muted)]">
-              Telefonun kamerası ilə QR-ı skan et, yaxud aşağıdakı kodu daxil et.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("settings.deviceScanHint")}</p>
             <div className="flex justify-center bg-white p-3 rounded-md">
               <QRCodeSVG value={pairUrl} size={200} />
             </div>
@@ -131,25 +131,21 @@ export function PairDeviceDialog({ origin }: { origin: string }) {
             </div>
             <div className="text-center text-sm">
               {expired ? (
-                <span className="text-red-600">Vaxtı keçdi</span>
+                <span className="text-red-600">{t("settings.deviceExpired")}</span>
               ) : (
                 <span className="text-[var(--muted)]">
-                  Qalan vaxt: {fmtCountdown(remaining)}
+                  {t("settings.deviceTimeLeft", { time: fmtCountdown(remaining) })}
                 </span>
               )}
             </div>
             {error && <p className="text-sm text-red-600 text-center">{error}</p>}
             <div className="flex gap-2">
               <button onClick={close} className="btn-ghost flex-1">
-                Bağla
+                {t("common.close")}
               </button>
               {expired && (
-                <button
-                  onClick={regen}
-                  disabled={isPending}
-                  className="btn-brand flex-1"
-                >
-                  Yeni kod yarat
+                <button onClick={regen} disabled={isPending} className="btn-brand flex-1">
+                  {t("settings.deviceNewCode")}
                 </button>
               )}
             </div>

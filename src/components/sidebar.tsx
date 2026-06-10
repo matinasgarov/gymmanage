@@ -20,10 +20,11 @@ import {
   HeartPulse,
 } from "lucide-react";
 import { logout } from "@/lib/auth-actions";
+import { useT } from "@/components/i18n-provider";
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: string;
   icon: typeof Users;
   match?: (path: string) => boolean;
   highlight?: boolean;
@@ -31,52 +32,52 @@ type NavItem = {
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Panel", icon: LayoutDashboard, ownerOnly: true },
+  { href: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, ownerOnly: true },
   {
     href: "/members",
-    label: "Üzvlər",
+    labelKey: "nav.members",
     icon: Users,
     match: (p) => p.startsWith("/members"),
     ownerOnly: true,
   },
-  { href: "/scan", label: "Skaner", icon: ScanLine, highlight: true },
+  { href: "/scan", labelKey: "nav.scan", icon: ScanLine, highlight: true },
   {
     href: "/payments",
-    label: "Ödənişlər",
+    labelKey: "nav.payments",
     icon: Receipt,
     match: (p) => p.startsWith("/payments"),
     ownerOnly: true,
   },
   {
     href: "/visitors",
-    label: "Qonaqlar",
+    labelKey: "nav.visitors",
     icon: UserCheck,
     match: (p) => p.startsWith("/visitors"),
     ownerOnly: true,
   },
   {
     href: "/leads",
-    label: "Müraciətlər",
+    labelKey: "nav.leads",
     icon: Inbox,
     match: (p) => p.startsWith("/leads"),
     ownerOnly: true,
   },
-  { href: "/reminders", label: "Xatırlatmalar", icon: Megaphone, ownerOnly: true },
+  { href: "/reminders", labelKey: "nav.reminders", icon: Megaphone, ownerOnly: true },
   {
     href: "/retention",
-    label: "Geri qaytarma",
+    labelKey: "nav.retention",
     icon: HeartPulse,
     match: (p) => p.startsWith("/retention"),
     ownerOnly: true,
   },
   {
     href: "/attendance",
-    label: "Davamiyyət",
+    labelKey: "nav.attendance",
     icon: Activity,
     match: (p) => p.startsWith("/attendance"),
     ownerOnly: true,
   },
-  { href: "/audit", label: "Audit jurnalı", icon: ScrollText, ownerOnly: true },
+  { href: "/audit", labelKey: "nav.audit", icon: ScrollText, ownerOnly: true },
 ];
 
 export function Sidebar({
@@ -91,6 +92,7 @@ export function Sidebar({
   role: "OWNER" | "STAFF";
 }) {
   const pathname = usePathname();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const visibleItems = ITEMS.filter((it) => role === "OWNER" || !it.ownerOnly);
 
@@ -100,7 +102,7 @@ export function Sidebar({
       <div className="lg:hidden sticky top-0 z-30 bg-[var(--sidebar-bg)] text-white flex items-center justify-between px-4 h-14">
         <button
           onClick={() => setOpen(true)}
-          aria-label="Menyu"
+          aria-label={t("nav.menu")}
           className="p-2 -ml-2"
         >
           <Menu className="w-5 h-5" />
@@ -147,7 +149,7 @@ export function Sidebar({
           <button
             onClick={() => setOpen(false)}
             className="lg:hidden p-1"
-            aria-label="Bağla"
+            aria-label={t("common.close")}
           >
             <X className="w-4 h-4 text-white" />
           </button>
@@ -172,7 +174,7 @@ export function Sidebar({
                 <Icon
                   className={`w-[18px] h-[18px] ${active ? "text-[var(--brand)]" : item.highlight ? "text-[var(--brand)]" : "text-[var(--sidebar-fg)]"}`}
                 />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
                 {item.highlight && !active && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse" />
                 )}
@@ -192,7 +194,7 @@ export function Sidebar({
                 type="submit"
                 className="text-[11px] text-[var(--sidebar-fg)] hover:text-white"
               >
-                Çıxış
+                {t("nav.logout")}
               </button>
             </form>
           </div>
@@ -200,7 +202,7 @@ export function Sidebar({
             <Link
               href="/settings"
               className="text-[var(--sidebar-fg)] hover:text-white p-1"
-              aria-label="Tənzimləmələr"
+              aria-label={t("nav.settings")}
             >
               <Settings className="w-4 h-4" />
             </Link>

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { UserPlus, QrCode } from "lucide-react";
 import { VisitorPassDialog } from "@/components/visitor-pass-dialog";
+import { useT } from "@/components/i18n-provider";
 
 export function VisitorPassActions() {
+  const t = useT();
   const [open, setOpen] = useState<"quick" | "daypass" | null>(null);
 
   return (
@@ -15,7 +17,7 @@ export function VisitorPassActions() {
         className="btn-ghost inline-flex items-center justify-center gap-1.5"
       >
         <UserPlus className="w-4 h-4" />
-        Tez giriş
+        {t("scan.quickEntry")}
       </button>
       <button
         type="button"
@@ -23,7 +25,7 @@ export function VisitorPassActions() {
         className="btn-ghost inline-flex items-center justify-center gap-1.5"
       >
         <QrCode className="w-4 h-4" />
-        Günlük QR
+        {t("scan.daypass")}
       </button>
 
       <VisitorPassDialog

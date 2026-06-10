@@ -2,28 +2,30 @@
 
 import { useActionState } from "react";
 import { signup, type FormState } from "@/lib/auth-actions";
+import { useT } from "@/components/i18n-provider";
 
 const initial: FormState = undefined;
 
 export function SignupForm() {
+  const t = useT();
   const [state, action, pending] = useActionState(signup, initial);
 
   return (
     <form action={action} className="space-y-4 bg-white p-6 rounded-lg shadow-sm border">
       <Field
-        label="Zalın adı"
+        label={t("settings.gymName")}
         name="gymName"
         placeholder="IronZone Gym"
         errors={state?.errors?.gymName}
       />
       <Field
-        label="Adınız və soyadınız"
+        label={t("auth.signupOwnerName")}
         name="ownerName"
         placeholder="Əli Məmmədov"
         errors={state?.errors?.ownerName}
       />
       <Field
-        label="Telefon"
+        label={t("memberForm.phone")}
         name="phone"
         type="tel"
         placeholder="+994501234567"
@@ -37,21 +39,15 @@ export function SignupForm() {
         errors={state?.errors?.email}
       />
       <Field
-        label="Şifrə"
+        label={t("auth.loginPassword")}
         name="password"
         type="password"
-        placeholder="Ən az 8 simvol"
+        placeholder={t("auth.signupPasswordPlaceholder")}
         errors={state?.errors?.password}
       />
-      {state?.message && (
-        <p className="text-sm text-red-600">{state.message}</p>
-      )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn-brand w-full"
-      >
-        {pending ? "Yaradılır…" : "Hesab yarat"}
+      {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
+      <button type="submit" disabled={pending} className="btn-brand w-full">
+        {pending ? t("auth.signupCreating") : t("auth.signupSubmit")}
       </button>
     </form>
   );

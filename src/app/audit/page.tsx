@@ -3,18 +3,12 @@ import { ScrollText } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getOwnerDb } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { AUDIT_ACTION_LABEL, summarizeAudit, entityHref, type AuditPayload } from "@/lib/audit";
 
 function fmtDateTime(d: Date) {
   return d.toISOString().replace("T", " ").slice(0, 16);
 }
-
-const ACTION_FILTERS: { value: string; label: string }[] = [
-  { value: "", label: "Hamısı" },
-  { value: "payment.", label: "Ödənişlər" },
-  { value: "member.", label: "Üzvlər" },
-  { value: "checkin.", label: "Girişlər" },
-];
 
 export default async function AuditPage({
   searchParams,
@@ -22,6 +16,15 @@ export default async function AuditPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   const { db } = await getOwnerDb();
+  const t = await getT();
+
+  const ACTION_FILTERS: { value: string; labelKey: string }[] = [
+    { value: "", labelKey: "audit.filterAll" },
+    { value: "payment.", labelKey: "audit.filterPayments" },
+    { value: "member.", labelKey: "audit.filterMembers" },
+    { value: "checkin.", labelKey: "audit.filterCheckins" },
+  ];
+
   const { filter } = await searchParams;
   const activePrefix = filter ?? "";
 
@@ -37,8 +40,8 @@ export default async function AuditPage({
   return (
     <AppShell>
       <PageHeader
-        title="Audit jurnalı"
-        subtitle="Bütün dəyişikliklər. Ödənişləri kim qeydə alıb, kim ləğv edib — hamısı burada."
+        title={t("audit.title")}
+        subtitle={t("audit.subtitle")}
         icon={ScrollText}
         tone="dark"
         tabs={
@@ -47,12 +50,13 @@ export default async function AuditPage({
               <Link
                 key={f.value}
                 href={f.value ? `/audit?filter=${encodeURIComponent(f.value)}` : "/audit"}
-                className={`px-4 py-2.5 border-b-2 -mb-px transition-colors ${activePrefix === f.value
-                  ? "border-[var(--brand)] text-white"
-                  : "border-transparent text-white/60 hover:text-white"
-                  }`}
+                className={`px-4 py-2.5 border-b-2 -mb-px transition-colors ${
+                  activePrefix === f.value
+                    ? "border-[var(--brand)] text-white"
+                    : "border-transparent text-white/60 hover:text-white"
+                }`}
               >
-                {f.label}
+                {t(f.labelKey)}
               </Link>
             ))}
           </nav>
@@ -63,7 +67,7 @@ export default async function AuditPage({
         {entries.length === 0 ? (
           <div className="card p-10 text-center">
             <ScrollText className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--muted)]">Heç bir qeyd yoxdur.</p>
+            <p className="text-sm text-[var(--muted)]">{t("audit.noEntries")}</p>
           </div>
         ) : (
           <div className="card divide-y divide-[var(--border)]">
@@ -76,7 +80,7 @@ export default async function AuditPage({
                   <div className="min-w-0">
                     <div className="text-sm font-medium">{label}</div>
                     <div className="text-[11px] text-[var(--muted)]">
-                      {fmtDateTime(e.createdAt)} · {e.actor?.name ?? "Sistem"}
+                      {fmtDateTime(e.createdAt)} · {e.actor?.name ?? t("audit.actorSystem")}
                       {summary ? ` · ${summary}` : ""}
                     </div>
                   </div>

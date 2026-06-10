@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getT } from "@/lib/i18n-server";
 import { StaffInviteForm } from "./staff-invite-form";
 import { StaffToggleButton } from "./staff-toggle-button";
 import { StaffDeleteDialog } from "./staff-delete-dialog";
@@ -13,10 +14,9 @@ function initials(name: string): string {
 }
 
 export async function StaffCard({ gymId }: { gymId: string }) {
+  const t = await getT();
   const staff = await prisma.user.findMany({
     where: { gymId, role: "STAFF" },
-    // passwordHash stays server-side — used only to derive the "pending" state,
-    // never passed to a client component.
     select: { id: true, name: true, email: true, active: true, passwordHash: true },
     orderBy: { createdAt: "asc" },
   });
@@ -24,11 +24,16 @@ export async function StaffCard({ gymId }: { gymId: string }) {
   return (
     <div className="space-y-5">
       {staff.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">Hələ işçi yoxdur.</p>
+        <p className="text-sm text-[var(--muted)]">{t("settings.staffNoStaff")}</p>
       ) : (
         <ul className="space-y-2">
           {staff.map((s) => {
             const pending = !s.active && s.passwordHash === "";
+            const statusLabel = s.active
+              ? t("settings.staffActive")
+              : pending
+                ? t("settings.staffPending")
+                : t("settings.staffInactive");
             return (
               <li
                 key={s.id}
@@ -50,7 +55,7 @@ export async function StaffCard({ gymId }: { gymId: string }) {
                         : "bg-neutral-200 text-neutral-600"
                   }`}
                 >
-                  {s.active ? "Aktiv" : pending ? "Dəvət gözlənilir" : "Deaktiv"}
+                  {statusLabel}
                 </span>
                 <div className="flex shrink-0 items-center gap-3">
                   {!pending && <StaffToggleButton staffId={s.id} active={s.active} />}
@@ -63,7 +68,7 @@ export async function StaffCard({ gymId }: { gymId: string }) {
       )}
 
       <div className="border-t border-[var(--border)] pt-4">
-        <h3 className="mb-2 text-sm font-medium">Yeni işçi əlavə et</h3>
+        <h3 className="mb-2 text-sm font-medium">{t("settings.staffAddTitle")}</h3>
         <StaffInviteForm />
       </div>
     </div>

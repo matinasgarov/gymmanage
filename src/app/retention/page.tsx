@@ -3,6 +3,7 @@ import { HeartPulse, UserMinus, CalendarX } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getOwnerDb } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import {
   getRetentionData,
   winBackMessage,
@@ -10,37 +11,40 @@ import {
   type RetentionKind,
 } from "@/lib/retention";
 import { buildWaUrl } from "@/lib/templates";
+import type { TFunction } from "@/lib/i18n";
 
 export default async function RetentionPage() {
-  const { user } = await getOwnerDb();
+  const [{ user }, t] = await Promise.all([getOwnerDb(), getT()]);
   const { ghosters, lapsers } = await getRetentionData(user.gymId);
   const total = ghosters.length + lapsers.length;
 
   return (
     <AppShell>
       <PageHeader
-        title="Geri qaytarma"
-        subtitle={`${total} üzv risk altında`}
+        title={t("retention.title")}
+        subtitle={t("retention.subtitle", { count: total })}
         icon={HeartPulse}
         tone="dark"
       />
 
       <div className="px-4 lg:px-8 py-6 space-y-6">
         <RiskSection
-          title="Gəlmir"
-          hint="Aktiv, amma 14 gündür gəlməyən üzvlər"
+          t={t}
+          title={t("retention.ghostersTitle")}
+          hint={t("retention.ghostersHint")}
           icon={UserMinus}
           kind="ghoster"
           members={ghosters}
-          emptyText="Bütün aktiv üzvlər müntəzəm gəlir 🎉"
+          emptyText={t("retention.ghostersEmpty")}
         />
         <RiskSection
-          title="Üzvlüyü bitib"
-          hint="Son 60 gündə üzvlüyü bitmiş və ya ləğv edilmiş üzvlər"
+          t={t}
+          title={t("retention.lapsersTitle")}
+          hint={t("retention.lapsersHint")}
           icon={CalendarX}
           kind="lapser"
           members={lapsers}
-          emptyText="Yaxınlarda üzvlüyü bitən yoxdur 🎉"
+          emptyText={t("retention.lapsersEmpty")}
         />
       </div>
     </AppShell>
@@ -48,6 +52,7 @@ export default async function RetentionPage() {
 }
 
 function RiskSection({
+  t,
   title,
   hint,
   icon: Icon,
@@ -55,6 +60,7 @@ function RiskSection({
   members,
   emptyText,
 }: {
+  t: TFunction;
   title: string;
   hint: string;
   icon: typeof UserMinus;
@@ -69,7 +75,7 @@ function RiskSection({
           <Icon className="w-4 h-4 text-[var(--brand-strong)]" />
           <h2 className="font-medium">{title}</h2>
         </div>
-        <span className="text-xs text-[var(--muted)]">{members.length} nəfər</span>
+        <span className="text-xs text-[var(--muted)]">{t("units.people", { count: members.length })}</span>
       </div>
       <p className="text-xs text-[var(--muted)] mb-3">{hint}</p>
 
@@ -78,7 +84,7 @@ function RiskSection({
       ) : (
         <ul className="divide-y divide-[var(--border)]">
           {members.map((m) => (
-            <RiskRow key={m.id} member={m} kind={kind} />
+            <RiskRow key={m.id} t={t} member={m} kind={kind} />
           ))}
         </ul>
       )}
@@ -86,13 +92,13 @@ function RiskSection({
   );
 }
 
-function RiskRow({ member, kind }: { member: MemberAtRisk; kind: RetentionKind }) {
+function RiskRow({ t, member, kind }: { t: TFunction; member: MemberAtRisk; kind: RetentionKind }) {
   const badge =
     member.daysSince === null
-      ? "Heç gəlməyib"
+      ? t("retention.neverVisited")
       : kind === "ghoster"
-        ? `${member.daysSince} gündür gəlmir`
-        : `${member.daysSince} gün öncə bitib`;
+        ? t("retention.absentDays", { count: member.daysSince })
+        : t("retention.expiredDaysAgo", { count: member.daysSince });
 
   const hasPhone = member.phone.trim().length > 0;
   const waUrl = hasPhone ? buildWaUrl(member.phone, winBackMessage(member, kind)) : null;
@@ -111,7 +117,7 @@ function RiskRow({ member, kind }: { member: MemberAtRisk; kind: RetentionKind }
         <div className="min-w-0">
           <div className="text-sm font-medium truncate">{member.name}</div>
           <div className="text-[11px] text-[var(--muted)]">
-            {member.publicId} · {member.phone || "telefon yoxdur"}
+            {member.publicId} · {member.phone || t("retention.noPhone")}
           </div>
         </div>
       </Link>
@@ -126,7 +132,7 @@ function RiskRow({ member, kind }: { member: MemberAtRisk; kind: RetentionKind }
             rel="noopener noreferrer"
             className="text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-3 py-1"
           >
-            WhatsApp
+            {t("common.whatsapp")}
           </a>
         )}
       </div>

@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 const { activeMembers, lapsedMembers, lastGranted } = vi.hoisted(() => ({
+  // startDate matters only for never-entered members: a member who joined
+  // within the threshold hasn't had time to "ghost" yet.
   activeMembers: [
-    { id: "a", name: "Ayan", phone: "+994501112233", publicId: "M-1", photoUrl: null },
-    { id: "b", name: "Babək", phone: "+994502223344", publicId: "M-2", photoUrl: null },
-    { id: "c", name: "Cavid", phone: "+994503334455", publicId: "M-3", photoUrl: null },
+    { id: "a", name: "Ayan", phone: "+994501112233", publicId: "M-1", photoUrl: null, startDate: new Date("2026-04-01T00:00:00Z") },
+    { id: "b", name: "Babək", phone: "+994502223344", publicId: "M-2", photoUrl: null, startDate: new Date("2026-04-01T00:00:00Z") },
+    { id: "c", name: "Cavid", phone: "+994503334455", publicId: "M-3", photoUrl: null, startDate: new Date("2026-05-01T00:00:00Z") },
+    // Deniz joined yesterday and has never entered — must NOT be a ghoster yet.
+    { id: "d", name: "Deniz", phone: "+994505556677", publicId: "M-4", photoUrl: null, startDate: new Date("2026-06-06T00:00:00Z") },
   ],
   lapsedMembers: [
     {
@@ -62,6 +66,12 @@ describe("retention — ghosters (active but absent ≥14 days)", () => {
   it("excludes members seen within the threshold", async () => {
     const { ghosters } = await getRetentionData("gym1");
     expect(ghosters.find((g) => g.id === "b")).toBeUndefined(); // Babək seen recently
+  });
+
+  it("excludes never-entered members still within their joining grace", async () => {
+    const { ghosters } = await getRetentionData("gym1");
+    // Deniz joined yesterday: never came, but not yet at risk.
+    expect(ghosters.find((g) => g.id === "d")).toBeUndefined();
   });
 });
 

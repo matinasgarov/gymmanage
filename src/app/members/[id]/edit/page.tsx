@@ -3,6 +3,7 @@ import { Pencil } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getGymDb } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { MemberForm } from "@/components/member-form";
 
 export default async function EditMemberPage({
@@ -11,6 +12,7 @@ export default async function EditMemberPage({
   params: Promise<{ id: string }>;
 }) {
   const { db } = await getGymDb();
+  const t = await getT();
   const { id } = await params;
 
   const member = await db.member.findFirst({
@@ -21,7 +23,7 @@ export default async function EditMemberPage({
   return (
     <AppShell>
       <PageHeader
-        title={`Redaktə: ${member.name}`}
+        title={t("memberForm.editTitle", { name: member.name })}
         subtitle={member.publicId}
         icon={Pencil}
         tone="dark"

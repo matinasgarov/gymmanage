@@ -1,5 +1,7 @@
-// Display helpers for the members triage list. Pure functions — safe to call
-// from server components.
+// Display helpers for the members triage list. The text-producing helpers take
+// a translator `t` (from getT()/useT()) so labels follow the active locale.
+
+import type { TFunction } from "@/lib/i18n";
 
 function startOfDayUTC(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -10,24 +12,24 @@ const DAY_MS = 86_400_000;
 export type SignalTone = "neutral" | "warn" | "danger";
 
 // Expiry countdown. Muted by default; warns within a week, danger once expired.
-export function expiryInfo(expiry: Date): { days: number; label: string; tone: SignalTone } {
+export function expiryInfo(expiry: Date, t: TFunction): { days: number; label: string; tone: SignalTone } {
   const today = startOfDayUTC(new Date());
   const e = startOfDayUTC(expiry);
   const days = Math.round((e.getTime() - today.getTime()) / DAY_MS);
-  if (days < 0) return { days, label: "Bitib", tone: "danger" };
-  if (days === 0) return { days, label: "Bu gün", tone: "warn" };
-  return { days, label: `${days} gün`, tone: days <= 7 ? "warn" : "neutral" };
+  if (days < 0) return { days, label: t("expiry.expired"), tone: "danger" };
+  if (days === 0) return { days, label: t("expiry.today"), tone: "warn" };
+  return { days, label: t("units.days", { count: days }), tone: days <= 7 ? "warn" : "neutral" };
 }
 
 // Relative last-check-in label, e.g. "Bu gün", "Dünən", "12 gün əvvəl".
-export function lastSeenLabel(d: Date | null): string {
-  if (!d) return "Heç vaxt";
+export function lastSeenLabel(d: Date | null, t: TFunction): string {
+  if (!d) return t("lastSeen.never");
   const today = startOfDayUTC(new Date());
   const day = startOfDayUTC(d);
   const diff = Math.round((today.getTime() - day.getTime()) / DAY_MS);
-  if (diff <= 0) return "Bu gün";
-  if (diff === 1) return "Dünən";
-  return `${diff} gün əvvəl`;
+  if (diff <= 0) return t("lastSeen.today");
+  if (diff === 1) return t("lastSeen.yesterday");
+  return t("units.daysAgo", { count: diff });
 }
 
 export function shortDate(d: Date): string {

@@ -3,6 +3,7 @@ import {
   createMember,
   freezeMember,
   cancelMember,
+  deleteMember,
 } from "@/lib/member-actions";
 import { RedirectError } from "../../../test/integration/stubs/next-navigation";
 import {
@@ -10,6 +11,7 @@ import {
   seedGym,
   seedOwner,
   seedMember,
+  seedPayment,
   login,
   formData,
 } from "../../../test/integration/helpers";
@@ -133,5 +135,57 @@ describe("member-lifecycle — cancel", () => {
       where: { action: "member.cancel", entityId: member.id },
     });
     expect(audit).toBe(1);
+  });
+});
+
+describe("member-lifecycle — delete", () => {
+  async function deleteOrThrow(memberId: string, fields: Record<string, string>) {
+    try {
+      await deleteMember(memberId, formData(fields));
+    } catch (e) {
+      if (!(e instanceof RedirectError)) throw e;
+    }
+  }
+
+  it("keeps paid payments by default — detaches them with a name snapshot", async () => {
+    const { gym } = await ownerCtx();
+    const member = await seedMember(gym.id, { name: "Silinən Üzv" });
+    const payment = await seedPayment(gym.id, member.id, {
+      status: "PAID",
+      paidAt: new Date(),
+      method: "CASH",
+    });
+
+    await deleteOrThrow(member.id, { confirmName: "Silinən Üzv", deletePayments: "false" });
+
+    expect(await prisma.member.findUnique({ where: { id: member.id } })).toBeNull();
+    const p = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
+    expect(p.memberId).toBeNull(); // detached, not deleted
+    expect(p.memberName).toBe("Silinən Üzv"); // snapshot preserved for reports
+    expect(p.status).toBe("PAID");
+  });
+
+  it("deletes payments too when the admin opts in", async () => {
+    const { gym } = await ownerCtx();
+    const member = await seedMember(gym.id, { name: "Tam Sil" });
+    const payment = await seedPayment(gym.id, member.id, {
+      status: "PAID",
+      paidAt: new Date(),
+      method: "CASH",
+    });
+
+    await deleteOrThrow(member.id, { confirmName: "Tam Sil", deletePayments: "true" });
+
+    expect(await prisma.member.findUnique({ where: { id: member.id } })).toBeNull();
+    expect(await prisma.payment.findUnique({ where: { id: payment.id } })).toBeNull();
+  });
+
+  it("refuses to delete when the typed name does not match", async () => {
+    const { gym } = await ownerCtx();
+    const member = await seedMember(gym.id, { name: "Qorunan" });
+
+    await deleteOrThrow(member.id, { confirmName: "yanlış", deletePayments: "false" });
+
+    expect(await prisma.member.findUnique({ where: { id: member.id } })).not.toBeNull();
   });
 });

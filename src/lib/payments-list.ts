@@ -3,6 +3,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { forGym } from "@/lib/tenant";
 import { computeEffectiveStatus, formatPeriodLabel } from "@/lib/payments";
 import { toCents, centsToNumber } from "@/lib/money";
+import { getLocale } from "@/lib/i18n-server";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 const OVERDUE_GRACE_DAYS = 5;
 export const PAYMENTS_PAGE_SIZE = 25;
@@ -112,13 +114,14 @@ export function buildPaymentsWhere(params: PaymentsListParams): Prisma.PaymentWh
   const and: Prisma.PaymentWhereInput[] = [];
 
   if (q) {
+    // Match the live member OR the snapshot left on orphaned (deleted-member) rows.
     and.push({
-      member: {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { publicId: { contains: q, mode: "insensitive" } },
-        ],
-      },
+      OR: [
+        { member: { name: { contains: q, mode: "insensitive" } } },
+        { member: { publicId: { contains: q, mode: "insensitive" } } },
+        { memberName: { contains: q, mode: "insensitive" } },
+        { memberPublicId: { contains: q, mode: "insensitive" } },
+      ],
     });
   }
   if (method) {
@@ -152,15 +155,17 @@ const ROW_INCLUDE = {
 
 type RawPaymentRow = Prisma.PaymentGetPayload<{ include: typeof ROW_INCLUDE }>;
 
-function toRow(p: RawPaymentRow): PaymentRow {
+function toRow(p: RawPaymentRow, locale: Locale = DEFAULT_LOCALE): PaymentRow {
+  // Orphaned payments (member deleted, history kept) fall back to the snapshot.
+  const planType = p.member?.planType ?? p.memberPlanType ?? "MONTHLY_UNLIMITED";
   return {
     id: p.id,
-    memberId: p.member.id,
-    memberName: p.member.name,
-    publicId: p.member.publicId,
-    phone: p.member.phone,
+    memberId: p.member?.id ?? "",
+    memberName: p.member?.name ?? p.memberName ?? "Silinmiş üzv",
+    publicId: p.member?.publicId ?? p.memberPublicId ?? "—",
+    phone: p.member?.phone ?? "",
     period: p.period,
-    periodLabel: formatPeriodLabel(p.dueDate, p.member.planType),
+    periodLabel: formatPeriodLabel(p.dueDate, planType, locale),
     dueDate: p.dueDate,
     paidAt: p.paidAt,
     method: p.method,
@@ -217,16 +222,19 @@ export async function getPaymentsList(
   const totalPages = Math.max(1, Math.ceil(total / PAYMENTS_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
 
-  const payments = await db.payment.findMany({
-    where,
-    orderBy: orderByFor(sort, dir),
-    skip: (safePage - 1) * PAYMENTS_PAGE_SIZE,
-    take: PAYMENTS_PAGE_SIZE,
-    include: ROW_INCLUDE,
-  });
+  const [payments, locale] = await Promise.all([
+    db.payment.findMany({
+      where,
+      orderBy: orderByFor(sort, dir),
+      skip: (safePage - 1) * PAYMENTS_PAGE_SIZE,
+      take: PAYMENTS_PAGE_SIZE,
+      include: ROW_INCLUDE,
+    }),
+    getLocale(),
+  ]);
 
   return {
-    rows: payments.map(toRow),
+    rows: payments.map((p) => toRow(p, locale)),
     total,
     page: safePage,
     pageSize: PAYMENTS_PAGE_SIZE,
@@ -251,11 +259,14 @@ export async function getPaymentsForExport(
   const sort = normSort(params.sort);
   const dir: "asc" | "desc" =
     params.dir === "asc" ? "asc" : params.dir === "desc" ? "desc" : sort === "date" ? "desc" : "asc";
-  const payments = await db.payment.findMany({
-    where,
-    orderBy: orderByFor(sort, dir),
-    take: 5000,
-    include: ROW_INCLUDE,
-  });
-  return payments.map(toRow);
+  const [payments, locale] = await Promise.all([
+    db.payment.findMany({
+      where,
+      orderBy: orderByFor(sort, dir),
+      take: 5000,
+      include: ROW_INCLUDE,
+    }),
+    getLocale(),
+  ]);
+  return payments.map((p) => toRow(p, locale));
 }

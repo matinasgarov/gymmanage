@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { Trash2 } from "lucide-react";
 import { getOwnerDb } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { revokeScannerDevice } from "@/lib/scanner-device-actions";
 import { PairDeviceDialog } from "@/components/pair-device-dialog";
 
@@ -11,6 +12,7 @@ function fmtDateTime(d: Date | null): string {
 
 export async function ScannerDevicesCard() {
   const { db } = await getOwnerDb();
+  const t = await getT();
   const devices = await db.scannerDevice.findMany({
     where: { revokedAt: null },
     orderBy: { createdAt: "desc" },
@@ -30,26 +32,20 @@ export async function ScannerDevicesCard() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-[var(--muted)]">
-        Qapıdakı telefonlar üçün skaner cihazları. Hər cihaz yalnız skan etmək
-        üçün istifadə olunur.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{t("settings.devicesHint")}</p>
 
       {devices.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">Hələ qoşulu cihaz yoxdur.</p>
+        <p className="text-sm text-[var(--muted)]">{t("settings.devicesNoDevices")}</p>
       ) : (
         <ul className="divide-y divide-[var(--border)]">
           {devices.map((d) => (
-            <li
-              key={d.id}
-              className="py-2 flex items-center justify-between gap-3"
-            >
+            <li key={d.id} className="py-2 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{d.name}</div>
                 <div className="text-[11px] text-[var(--muted)]">
                   {d.tokenHash
-                    ? `Son giriş: ${fmtDateTime(d.lastSeenAt)}`
-                    : "Qoşulma gözlənilir"}
+                    ? t("settings.devicesLastSeen", { date: fmtDateTime(d.lastSeenAt) })
+                    : t("settings.devicesPending")}
                 </div>
               </div>
               <form
@@ -60,9 +56,9 @@ export async function ScannerDevicesCard() {
               >
                 <button
                   className="text-red-600 hover:text-red-700 inline-flex items-center gap-1 text-sm"
-                  aria-label="Sil"
+                  aria-label={t("common.delete")}
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Sil
+                  <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
                 </button>
               </form>
             </li>

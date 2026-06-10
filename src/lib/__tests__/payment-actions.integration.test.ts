@@ -74,7 +74,12 @@ describe("payment-actions — renewMembership", () => {
     expect(advance?.method).toBe("CARD");
 
     const m = await prisma.member.findUniqueOrThrow({ where: { id: member.id } });
-    expect(m.expiryDate.getTime()).toBeGreaterThan(today.getTime() + 10 * DAY);
+    // Early renewal resets access to exactly one plan length from *now* — it must
+    // NOT compound the leftover days onto the next cycle (which would land near
+    // +50 days). Date-only column vs a timestamp rounds to 29 or 30.
+    const days = daysApart(m.expiryDate, today);
+    expect(days).toBeGreaterThanOrEqual(29);
+    expect(days).toBeLessThanOrEqual(30);
 
     const audit = await prisma.auditLog.count({
       where: { action: "member.renew", entityId: member.id },

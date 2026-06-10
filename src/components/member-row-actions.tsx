@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MoreVertical, User, Pencil, MessageCircle, RefreshCw } from "lucide-react";
 import { buildWaUrl } from "@/lib/templates";
 import { renewMembership } from "@/lib/payment-actions";
+import { useT, useLocale } from "@/components/i18n-provider";
 
 // Row-level quick actions. Lives in the list so triage doesn't require opening
 // each profile. Freeze/Cancel deliberately stay on the detail page — they need
@@ -20,6 +21,8 @@ export function MemberRowActions({
   phone: string | null;
   expiryDate: string; // ISO — used for the early-renewal guard
 }) {
+  const t = useT();
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [renewing, startRenew] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -66,7 +69,7 @@ export function MemberRowActions({
     const expiry = new Date(expiryDate);
     if (new Date() < expiry) {
       const ok = window.confirm(
-        `${name} üzvlüyü hələ ${expiry.toLocaleDateString("az")} tarixinə qədər keçərlidir. Yenə də yeniləmək?`
+        t("rowActions.renewConfirm", { name, date: expiry.toLocaleDateString(locale) })
       );
       if (!ok) return;
     }
@@ -80,14 +83,14 @@ export function MemberRowActions({
 
   const waUrl =
     phone && phone.trim()
-      ? buildWaUrl(phone, `Salam ${name}, GymPass-dən yazırıq.`)
+      ? buildWaUrl(phone, t("rowActions.waHello", { name }))
       : null;
 
   return (
     <div ref={ref} className="relative" onClick={stop}>
       <button
         type="button"
-        aria-label="Əməliyyatlar"
+        aria-label={t("members.actions")}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(e) => {
@@ -111,7 +114,7 @@ export function MemberRowActions({
             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--background)]"
           >
             <User className="h-4 w-4 text-[var(--muted)]" />
-            Profil
+            {t("rowActions.profile")}
           </Link>
           <Link
             role="menuitem"
@@ -120,7 +123,7 @@ export function MemberRowActions({
             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--background)]"
           >
             <Pencil className="h-4 w-4 text-[var(--muted)]" />
-            Redaktə
+            {t("rowActions.edit")}
           </Link>
           {/* Quick renew records a Nağd payment for the next period and extends
               the membership. Use the detail page to renew with another method. */}
@@ -134,7 +137,7 @@ export function MemberRowActions({
             <RefreshCw
               className={`h-4 w-4 text-[var(--brand-strong)] ${renewing ? "animate-spin" : ""}`}
             />
-            {renewing ? "Yenilənir…" : "Yenilə (Nağd)"}
+            {renewing ? t("rowActions.renewing") : t("rowActions.renewCash")}
           </button>
           {waUrl && (
             <a
@@ -146,7 +149,7 @@ export function MemberRowActions({
               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--background)]"
             >
               <MessageCircle className="h-4 w-4 text-emerald-500" />
-              WhatsApp
+              {t("common.whatsapp")}
             </a>
           )}
         </div>

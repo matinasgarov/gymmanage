@@ -3,15 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassUrlToken } from "@/lib/qr";
 import { formatAZN } from "@/lib/members";
 import { RotatingQR } from "@/components/rotating-qr";
-import { PLAN_LABEL } from "@/config/gym-plans";
-
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: "Aktiv",
-  OVERDUE: "Borclu",
-  FROZEN: "Donduruldu",
-  EXPIRED: "Bitib",
-  CANCELLED: "Ləğv edilib",
-};
+import { getT } from "@/lib/i18n-server";
 
 const STATUS_COLOR: Record<string, string> = {
   ACTIVE: "bg-green-100 text-green-800",
@@ -27,6 +19,7 @@ export default async function MemberPassPage({
   params: Promise<{ memberId: string; token: string }>;
 }) {
   const { memberId, token } = await params;
+  const t = await getT();
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
@@ -43,7 +36,7 @@ export default async function MemberPassPage({
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4">
         <header className="text-center">
           <h1 className="text-lg font-semibold">{member.gym.name}</h1>
-          <p className="text-xs text-neutral-500">Üzv kartı</p>
+          <p className="text-xs text-neutral-500">{t("pass.memberCard")}</p>
         </header>
 
         <div className="flex flex-col items-center">
@@ -64,24 +57,24 @@ export default async function MemberPassPage({
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <Info label="Status">
+          <Info label={t("pass.status")}>
             <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLOR[member.status]}`}>
-              {STATUS_LABEL[member.status]}
+              {t(`status.${member.status}`)}
             </span>
           </Info>
-          <Info label="Plan">
-            <span>{PLAN_LABEL[member.planType]}</span>
+          <Info label={t("pass.plan")}>
+            <span>{t(`plan.${member.planType}`)}</span>
           </Info>
-          <Info label="Qiymət">
+          <Info label={t("pass.price")}>
             <span>{formatAZN(member.planPrice)}</span>
           </Info>
-          <Info label="Bitmə">
+          <Info label={t("pass.expiry")}>
             <span>{member.expiryDate.toISOString().slice(0, 10)}</span>
           </Info>
         </div>
 
         <p className="text-[11px] text-neutral-400 text-center pt-2 border-t">
-          Bu səhifəni əlavə etmək üçün brauzerdə "Ana ekrana əlavə et" funksiyasından istifadə edin.
+          {t("pass.addToHomeHint")}
         </p>
       </div>
     </main>

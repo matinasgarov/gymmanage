@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { verifyScan } from "@/lib/scan-actions";
+import { getT } from "@/lib/i18n-server";
 
 // Hit when a phone's native camera app opens the QR's URL directly.
 // We verify server-side and show the result inline.
@@ -9,10 +10,10 @@ export default async function ScanVerifyPage({
 }: {
   searchParams: Promise<{ t?: string }>;
 }) {
-  const { t } = await searchParams;
-  if (!t) redirect("/scan");
+  const { t: token } = await searchParams;
+  if (!token) redirect("/scan");
 
-  const result = await verifyScan(t);
+  const [t, result] = await Promise.all([getT(), verifyScan(token)]);
   const granted = result.ok;
 
   return (
@@ -22,13 +23,13 @@ export default async function ScanVerifyPage({
       >
         <div className="text-6xl mb-3">{granted ? "✓" : "✕"}</div>
         <div className="text-2xl font-semibold mb-1">
-          {granted ? "GİRİŞ İCAZƏLİDİR" : "GİRİŞ QADAĞANDIR"}
+          {granted ? t("scanVerify.granted") : t("scanVerify.denied")}
         </div>
         {result.ok ? (
           <>
             <div className="text-lg">{result.member.name}</div>
             <div className="text-sm opacity-90">
-              {result.member.publicId} · Bitmə: {result.member.expiryDate}
+              {result.member.publicId} · {t("scanVerify.expiry", { date: result.member.expiryDate })}
             </div>
           </>
         ) : (
@@ -43,7 +44,7 @@ export default async function ScanVerifyPage({
         )}
       </div>
       <a href="/scan" className="block text-center text-sm text-blue-600 underline mt-4">
-        Skanerə qayıt
+        {t("scanVerify.backToScanner")}
       </a>
     </AppShell>
   );

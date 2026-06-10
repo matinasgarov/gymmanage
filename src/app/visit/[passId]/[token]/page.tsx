@@ -3,6 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Dumbbell } from "lucide-react";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getT } from "@/lib/i18n-server";
 
 function fmtTime(d: Date) {
   return d.toISOString().slice(11, 16);
@@ -15,12 +16,15 @@ export default async function VisitorPassPage({
 }) {
   const { passId, token } = await params;
 
-  const pass = await prisma.visitorPass.findFirst({
-    where: { id: passId, token },
-    include: {
-      gym: { select: { name: true, logoUrl: true } },
-    },
-  });
+  const [t, pass] = await Promise.all([
+    getT(),
+    prisma.visitorPass.findFirst({
+      where: { id: passId, token },
+      include: {
+        gym: { select: { name: true, logoUrl: true } },
+      },
+    }),
+  ]);
   if (!pass) notFound();
 
   const expired = pass.expiresAt.getTime() < Date.now();
@@ -46,15 +50,15 @@ export default async function VisitorPassPage({
             )}
           </div>
           <h1 className="text-lg font-semibold">{pass.gym.name}</h1>
-          <p className="text-xs text-neutral-500">Günlük qonaq kartı</p>
+          <p className="text-xs text-neutral-500">{t("visitPass.title")}</p>
         </header>
 
         <div className="text-center">
-          <p className="text-base font-medium">{pass.name ?? "Qonaq"}</p>
+          <p className="text-base font-medium">{pass.name ?? t("visitPass.anonymous")}</p>
           <p className="text-xs text-neutral-500">
             {expired
-              ? "QR vaxtı keçib"
-              : `${fmtTime(pass.expiresAt)}-ə qədər keçərlidir`}
+              ? t("visitPass.expired")
+              : t("visitPass.validUntil", { time: fmtTime(pass.expiresAt) })}
           </p>
         </div>
 
@@ -67,7 +71,7 @@ export default async function VisitorPassPage({
         )}
 
         <p className="text-[11px] text-neutral-400 text-center pt-2 border-t">
-          Bu QR yalnız bu gün keçərlidir və saysız dəfə istifadə edilə bilər.
+          {t("visitPass.footer")}
         </p>
       </div>
     </main>

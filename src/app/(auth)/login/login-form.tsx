@@ -3,10 +3,12 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { login, type FormState } from "@/lib/auth-actions";
+import { useT } from "@/components/i18n-provider";
 
 const initial: FormState = undefined;
 
 export function LoginForm() {
+  const t = useT();
   const [state, action, pending] = useActionState(login, initial);
 
   return (
@@ -28,7 +30,7 @@ export function LoginForm() {
       </div>
       <div>
         <label htmlFor="password" className="block text-sm font-medium mb-1">
-          Şifrə
+          {t("auth.loginPassword")}
         </label>
         <input
           id="password"
@@ -42,18 +44,12 @@ export function LoginForm() {
       </div>
       <div className="text-right -mt-2">
         <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">
-          Şifrəni unutdunuz?
+          {t("auth.loginForgot")}
         </Link>
       </div>
-      {state?.message && (
-        <p className="text-sm text-red-600">{state.message}</p>
-      )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn-brand w-full"
-      >
-        {pending ? "Yoxlanılır…" : "Daxil ol"}
+      {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
+      <button type="submit" disabled={pending} className="btn-brand w-full">
+        {pending ? t("auth.loginChecking") : t("auth.loginSubmit")}
       </button>
     </form>
   );

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { MemberForm } from "@/components/member-form";
 import { getOwnerDb } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import type { PlanType } from "@/generated/prisma/enums";
 
 export default async function NewMemberPage({
@@ -11,6 +12,7 @@ export default async function NewMemberPage({
   searchParams: Promise<{ leadId?: string }>;
 }) {
   const { db } = await getOwnerDb();
+  const t = await getT();
   const { leadId } = await searchParams;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -33,8 +35,8 @@ export default async function NewMemberPage({
   return (
     <AppShell>
       <PageHeader
-        title={leadPrefill ? "Müraciəti üzvə çevir" : "Yeni üzv"}
-        subtitle={leadPrefill ? "Məlumatları yoxlayın və saxlayın" : "Məlumatları doldurun və QR kart yaradın"}
+        title={leadPrefill ? t("memberForm.convertTitle") : t("memberForm.newTitle")}
+        subtitle={leadPrefill ? t("memberForm.convertSubtitle") : t("memberForm.newSubtitle")}
         icon={UserPlus}
         tone="dark"
       />

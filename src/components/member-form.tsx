@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { createMember, updateMember, type MemberFormState } from "@/lib/member-actions";
 import type { PlanType } from "@/generated/prisma/enums";
 import { PLAN_TYPES, PLANS } from "@/config/gym-plans";
+import { useT } from "@/components/i18n-provider";
 
 export type MemberFormDefaults = {
   name: string;
@@ -24,6 +25,7 @@ export function MemberForm(props: {
   leadId?: string;
   defaults: MemberFormDefaults;
 }) {
+  const t = useT();
   const action = props.mode === "create"
     ? createMember
     : updateMember.bind(null, props.memberId!);
@@ -33,20 +35,20 @@ export function MemberForm(props: {
     <form action={formAction} className="space-y-4">
       {props.leadId && <input type="hidden" name="leadId" value={props.leadId} />}
       <Field
-        label="Ad və soyad"
+        label={t("memberForm.name")}
         name="name"
         defaultValue={props.defaults.name}
         errors={state?.errors?.name}
       />
       <Field
-        label="Telefon"
+        label={t("memberForm.phone")}
         name="phone"
         type="tel"
         defaultValue={props.defaults.phone}
         errors={state?.errors?.phone}
       />
       <Field
-        label="Email (ixtiyari)"
+        label={t("memberForm.email")}
         name="email"
         type="email"
         defaultValue={props.defaults.email}
@@ -54,7 +56,7 @@ export function MemberForm(props: {
       />
       <div>
         <label className="block text-sm font-medium mb-1" htmlFor="planType">
-          Plan
+          {t("memberForm.plan")}
         </label>
         <select
           id="planType"
@@ -64,14 +66,16 @@ export function MemberForm(props: {
         >
           {PLAN_TYPES.map((v) => (
             <option key={v} value={v}>
-              {PLANS[v].label}
-              {PLANS[v].maxEntries != null ? ` — ${PLANS[v].maxEntries} giriş/ay` : ""}
+              {t(`plan.${v}`)}
+              {PLANS[v].maxEntries != null
+                ? ` — ${t("memberForm.entriesPerMonth", { count: PLANS[v].maxEntries! })}`
+                : ""}
             </option>
           ))}
         </select>
       </div>
       <Field
-        label="Qiymət (₼)"
+        label={t("memberForm.price")}
         name="planPrice"
         type="number"
         step="0.01"
@@ -79,7 +83,7 @@ export function MemberForm(props: {
         errors={state?.errors?.planPrice}
       />
       <Field
-        label="Başlama tarixi"
+        label={t("memberForm.startDate")}
         name="startDate"
         type="date"
         defaultValue={props.defaults.startDate}
@@ -87,7 +91,7 @@ export function MemberForm(props: {
       />
       <div>
         <label className="block text-sm font-medium mb-1" htmlFor="notes">
-          Qeyd (ixtiyari)
+          {t("memberForm.notes")}
         </label>
         <textarea
           id="notes"
@@ -107,7 +111,7 @@ export function MemberForm(props: {
           className="h-4 w-4 rounded border-neutral-300"
         />
         <label htmlFor="unlimitedEntries" className="text-sm">
-          Gündə bir dəfədən çox girişə icazə ver
+          {t("memberForm.unlimitedEntries")}
         </label>
       </div>
       {/* The per-cycle entry cap is driven by the selected plan (e.g. "12 giriş"
@@ -119,10 +123,10 @@ export function MemberForm(props: {
         className="btn-brand w-full"
       >
         {pending
-          ? "Saxlanılır…"
+          ? t("memberForm.saving")
           : props.mode === "create"
-            ? "Saxla və QR yarat"
-            : "Yenilə"}
+            ? t("memberForm.create")
+            : t("memberForm.update")}
       </button>
     </form>
   );

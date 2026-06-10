@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Activity } from "lucide-react";
 import { Scanner } from "@/components/scanner";
 import { DoorManualLookup } from "@/components/door-manual-lookup";
+import { useT } from "@/components/i18n-provider";
 import type { ScanResult } from "@/lib/scan-actions";
 
 export function DoorPanel({
@@ -15,6 +16,7 @@ export function DoorPanel({
   deviceName: string;
   todayCount: number;
 }) {
+  const t = useT();
   const [manualResult, setManualResult] = useState<ScanResult | null>(null);
 
   return (
@@ -27,7 +29,7 @@ export function DoorPanel({
         <div className="flex items-center gap-1 text-sm">
           <Activity className="w-4 h-4 text-[var(--brand-strong)]" />
           <span className="font-semibold">{todayCount}</span>
-          <span className="text-[var(--muted)]">bu gün</span>
+          <span className="text-[var(--muted)]">{t("door.todayLabel")}</span>
         </div>
       </header>
 
@@ -41,8 +43,8 @@ export function DoorPanel({
             }`}
           >
             {manualResult.ok
-              ? `Giriş verildi: ${manualResult.member.name}`
-              : `İmtina: ${manualResult.reason}`}
+              ? t("door.grantedResult", { name: manualResult.member.name })
+              : t("door.deniedResult", { reason: manualResult.reason })}
           </div>
         )}
       </div>

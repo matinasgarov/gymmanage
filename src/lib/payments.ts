@@ -2,27 +2,39 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { PlanType } from "@/generated/prisma/enums";
 import { planDurationDays } from "@/config/gym-plans";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 // Days after dueDate before a pending payment is considered overdue.
 const OVERDUE_GRACE_DAYS = 5;
 
-const AZ_MONTHS = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun",
-  "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
-];
+const MONTHS: Record<Locale, string[]> = {
+  az: [
+    "Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun",
+    "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
+  ],
+  ru: [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+  ],
+};
 
 export function periodKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function formatPeriodLabel(periodStart: Date, plan: PlanType): string {
+export function formatPeriodLabel(
+  periodStart: Date,
+  plan: PlanType,
+  locale: Locale = DEFAULT_LOCALE
+): string {
+  const months = MONTHS[locale] ?? MONTHS[DEFAULT_LOCALE];
   const end = new Date(periodStart);
   end.setUTCDate(end.getUTCDate() + planDurationDays(plan) - 1);
   // Any 30-day plan (Monthly Unlimited, 12-entries) gets the "May 2026" label.
   if (planDurationDays(plan) === 30) {
-    return `${AZ_MONTHS[periodStart.getUTCMonth()]} ${periodStart.getUTCFullYear()}`;
+    return `${months[periodStart.getUTCMonth()]} ${periodStart.getUTCFullYear()}`;
   }
-  return `${periodStart.getUTCDate()} ${AZ_MONTHS[periodStart.getUTCMonth()]} – ${end.getUTCDate()} ${AZ_MONTHS[end.getUTCMonth()]} ${end.getUTCFullYear()}`;
+  return `${periodStart.getUTCDate()} ${months[periodStart.getUTCMonth()]} – ${end.getUTCDate()} ${months[end.getUTCMonth()]} ${end.getUTCFullYear()}`;
 }
 
 // All period start dates from start to today (inclusive), for a plan.

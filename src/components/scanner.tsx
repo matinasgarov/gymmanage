@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { verifyScan, overrideScan, manualLookup, type ScanResult } from "@/lib/scan-actions";
+import { useT } from "@/components/i18n-provider";
 
 type ScannerState =
   | { mode: "idle" }
@@ -16,6 +17,7 @@ const RESULT_DISPLAY_MS = 3500;
 const SCAN_COOLDOWN_MS = 30_000;
 
 export function Scanner({ canOverride }: { canOverride: boolean }) {
+  const t = useT();
   const [state, setState] = useState<ScannerState>({ mode: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [lookupQuery, setLookupQuery] = useState("");
@@ -64,14 +66,9 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
   const startCamera = useCallback(async () => {
     setError(null);
     busyRef.current = false;
-    // Intentionally keep lastTokenRef — the just-scanned QR is still likely
-    // in front of the camera when it restarts. Cooldown keeps it from firing
-    // again. A different QR will scan immediately.
 
     if (typeof window !== "undefined" && !window.isSecureContext) {
-      setError(
-        "Kamera yalnız HTTPS-də işləyir. Telefonda test üçün tunel (məsələn cloudflared) istifadə edin."
-      );
+      setError(t("scan.httpsError"));
       return;
     }
 
@@ -94,8 +91,6 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
         { facingMode: "environment" },
         {
           fps: 10,
-          // Responsive scan box: 70% of the smaller camera dimension so it
-          // scales with the device instead of a fixed 260px square.
           qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
             const size = Math.round(
               Math.min(viewfinderWidth, viewfinderHeight) * 0.7
@@ -106,53 +101,44 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
         (decoded) => {
           handleDecoded(decoded);
         },
-        () => {
-          // per-frame decode failures are normal, ignore
-        }
+        () => {}
       );
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Naməlum xəta";
-      setError(
-        `Kameranı açmaq mümkün olmadı: ${msg}. Brauzerin kamera icazəsini yoxlayın.`
-      );
+      const msg = e instanceof Error ? e.message : t("scan.unknownError");
+      setError(t("scan.cameraError", { msg }));
       setState({ mode: "idle" });
     }
-  }, [handleDecoded]);
+  }, [handleDecoded, t]);
 
   const reset = useCallback(() => {
     setState({ mode: "idle" });
   }, []);
 
-  // Auto-restart camera after result is shown
   useEffect(() => {
     if (state.mode !== "result") return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       void startCamera();
     }, RESULT_DISPLAY_MS);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [state, startCamera]);
 
-  // Stop the camera on unmount
   useEffect(() => () => { void stopCamera(); }, [stopCamera]);
 
-  // Auto-start camera as soon as the page mounts — staff shouldn't need an extra tap
   useEffect(() => {
     void startCamera();
-    // Only on first mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Manual lookup debounce
   useEffect(() => {
     if (lookupQuery.trim().length < 2) {
       setLookupResults([]);
       return;
     }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       const rows = await manualLookup(lookupQuery);
       setLookupResults(rows);
     }, 250);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [lookupQuery]);
 
   if (state.mode === "result") {
@@ -174,11 +160,8 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
       </div>
 
       {state.mode === "idle" && (
-        <button
-          onClick={startCamera}
-          className="btn-brand w-full"
-        >
-          Skanı başlat
+        <button onClick={startCamera} className="btn-brand w-full">
+          {t("scan.start")}
         </button>
       )}
       {state.mode === "scanning" && (
@@ -189,23 +172,21 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
           }}
           className="btn-ghost w-full"
         >
-          Dayandır
+          {t("scan.stop")}
         </button>
       )}
 
-      {error && (
-        <p className="text-sm text-red-600 mt-3">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
 
       <details className="mt-6 bg-white border rounded-lg">
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-          Telefonu yoxdur? Əl ilə tap
+          {t("scan.manualLookup")}
         </summary>
         <div className="p-4 border-t">
           <input
             value={lookupQuery}
             onChange={(e) => setLookupQuery(e.target.value)}
-            placeholder="Ad, telefon və ya ID…"
+            placeholder={t("scan.manualPlaceholder")}
             className="w-full px-3 py-2 border rounded-md"
           />
           {lookupResults.length > 0 && (
@@ -238,6 +219,7 @@ function ResultOverlay(props: {
   canOverride: boolean;
   onDismiss: () => void;
 }) {
+  const t = useT();
   const { result } = props;
   const granted = result.ok;
   const bg = granted ? "bg-green-600" : "bg-red-600";
@@ -259,13 +241,13 @@ function ResultOverlay(props: {
         <div className="text-6xl mb-3">{granted ? "✓" : "✕"}</div>
       )}
       <div className="text-2xl font-semibold mb-1">
-        {granted ? "GİRİŞ İCAZƏLİDİR" : "GİRİŞ QADAĞANDIR"}
+        {granted ? t("scan.granted") : t("scan.denied")}
       </div>
       {result.ok ? (
         <>
           <div className="text-lg">{result.member.name}</div>
           <div className="text-sm opacity-90">
-            {result.member.publicId} · Bitmə: {result.member.expiryDate}
+            {result.member.publicId} · {t("scan.expiryLabel")} {result.member.expiryDate}
           </div>
         </>
       ) : (
@@ -281,12 +263,13 @@ function ResultOverlay(props: {
           )}
         </>
       )}
-      <p className="text-xs opacity-75 mt-6">Davam etmək üçün toxunun…</p>
+      <p className="text-xs opacity-75 mt-6">{t("scan.tapToContinue")}</p>
     </div>
   );
 }
 
 function OverrideForm({ memberId }: { memberId: string }) {
+  const t = useT();
   const [note, setNote] = useState("");
   const [done, setDone] = useState(false);
   return (
@@ -295,13 +278,13 @@ function OverrideForm({ memberId }: { memberId: string }) {
       onClick={(e) => e.stopPropagation()}
     >
       {done ? (
-        <p className="text-sm">İcazə qeydə alındı.</p>
+        <p className="text-sm">{t("scan.overrideDone")}</p>
       ) : (
         <>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="İcazənin səbəbi"
+            placeholder={t("scan.overrideNote")}
             className="w-full px-2 py-1 rounded text-black text-sm"
           />
           <button
@@ -311,7 +294,7 @@ function OverrideForm({ memberId }: { memberId: string }) {
             }}
             className="mt-2 w-full bg-white text-red-700 rounded px-3 py-1.5 text-sm font-medium"
           >
-            Yenə icazə ver
+            {t("scan.overrideApprove")}
           </button>
         </>
       )}
@@ -320,18 +303,19 @@ function OverrideForm({ memberId }: { memberId: string }) {
 }
 
 function ManualOverrideButton({ memberId }: { memberId: string }) {
+  const t = useT();
   const [done, setDone] = useState(false);
   return done ? (
-    <span className="text-xs text-green-700">İcazəli</span>
+    <span className="text-xs text-green-700">{t("scan.manualApproved")}</span>
   ) : (
     <button
       onClick={async () => {
-        await overrideScan(memberId, "Telefonsuz giriş");
+        await overrideScan(memberId, "no-phone-entry");
         setDone(true);
       }}
       className="text-xs bg-green-600 text-white px-2 py-1 rounded"
     >
-      İcazə ver
+      {t("scan.manualApprove")}
     </button>
   );
 }

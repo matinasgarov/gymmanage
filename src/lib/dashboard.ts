@@ -108,7 +108,7 @@ export async function getDashboard(gymId: string) {
         status: "PAID",
         paidAt: { gte: monthStart },
       },
-      select: { amount: true, member: { select: { planType: true } } },
+      select: { amount: true, memberPlanType: true, member: { select: { planType: true } } },
     }),
 
     // Members cancelled this calendar month
@@ -156,7 +156,7 @@ export async function getDashboard(gymId: string) {
   // Aggregate revenue by plan + visitor pseudo-plan, exact integer cents.
   const planCents: Record<string, number> = {};
   for (const p of monthRevenueByPlan) {
-    const plan = p.member?.planType ?? "MONTHLY_UNLIMITED";
+    const plan = p.member?.planType ?? p.memberPlanType ?? "MONTHLY_UNLIMITED";
     planCents[plan] = (planCents[plan] ?? 0) + toCents(p.amount);
   }
   const revenueByPlan = Object.entries(planCents)
@@ -199,10 +199,16 @@ export async function getDashboard(gymId: string) {
 
   const monthRevenueCents = toCents(monthRevenueRow._sum.amount) + visitorRevenueCents;
 
+  // The query already excludes orphaned (deleted-member) rows via the member
+  // status filter; narrow the type so consumers see a non-null member.
+  const overdueWithMember = overdueMembers.filter(
+    (p): p is typeof p & { member: NonNullable<(typeof p)["member"]> } => p.member !== null
+  );
+
   return {
     activeCount,
-    overdueCount: overdueMembers.length,
-    overdueMembers,
+    overdueCount: overdueWithMember.length,
+    overdueMembers: overdueWithMember,
     expiringCount: expiringMembers.length,
     expiringMembers,
     todayCheckIns,

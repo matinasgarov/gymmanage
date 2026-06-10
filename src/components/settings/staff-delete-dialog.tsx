@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
 import { deleteStaff } from "@/lib/auth-actions";
+import { useT } from "@/components/i18n-provider";
 
 export function StaffDeleteDialog({
   staffId,
@@ -11,6 +12,7 @@ export function StaffDeleteDialog({
   staffId: string;
   staffName: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const action = deleteStaff.bind(null, staffId);
@@ -28,7 +30,7 @@ export function StaffDeleteDialog({
         onClick={() => setOpen(true)}
         className="text-xs text-red-600 hover:text-red-700 hover:underline"
       >
-        Sil
+        {t("settings.staffDeleteButton")}
       </button>
 
       {open && (
@@ -43,24 +45,19 @@ export function StaffDeleteDialog({
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold flex items-center gap-2 text-red-700">
                 <AlertTriangle className="w-4 h-4" />
-                İşçini sil
+                {t("settings.staffDeleteTitle")}
               </h3>
-              <button onClick={close} className="p-1 -mr-1" aria-label="Bağla">
+              <button onClick={close} className="p-1 -mr-1" aria-label={t("common.close")}>
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="text-sm text-[var(--muted)] space-y-2 mb-4">
               <p>
-                <strong className="text-[var(--foreground)]">{staffName}</strong>{" "}
-                adlı işçinin hesabı{" "}
-                <strong className="text-red-700">həmişəlik silinəcək</strong>. Onların
-                keçmiş əməliyyatları (ödəniş, giriş qeydləri) saxlanılır, lakin kimin
-                etdiyi görünməyəcək.
+                {t("settings.staffDeleteWarning", { name: staffName })}
               </p>
               <p>
-                Təsdiq üçün işçinin adını yazın:{" "}
-                <strong className="text-[var(--foreground)]">{staffName}</strong>
+                {t("settings.staffDeleteConfirmPrompt", { name: staffName })}
               </p>
             </div>
 
@@ -75,14 +72,14 @@ export function StaffDeleteDialog({
               />
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={close} className="btn-ghost">
-                  Ləğv et
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={!matches}
                   className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-full px-4 py-2 text-sm font-medium"
                 >
-                  Həmişəlik sil
+                  {t("settings.staffDeleteConfirm")}
                 </button>
               </div>
             </form>

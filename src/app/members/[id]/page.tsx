@@ -5,6 +5,7 @@ import { User as UserIcon, ChevronLeft, ExternalLink, Pencil, Snowflake, Message
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getGymDb } from "@/lib/dal";
+import { getT, getLocale } from "@/lib/i18n-server";
 import { formatAZN } from "@/lib/members";
 import {
   freezeMember,
@@ -23,13 +24,7 @@ import { CancelDialog } from "@/components/cancel-dialog";
 import { DeleteMemberDialog } from "@/components/delete-member-dialog";
 import { PhotoUpload } from "@/components/photo-upload";
 import { buildWaUrl, pickTemplate, renderTemplate } from "@/lib/templates";
-import {
-  MEMBER_STATUS_LABEL as STATUS_LABEL,
-  MEMBER_STATUS_COLOR as STATUS_COLOR,
-  PLAN_LABEL,
-  PAY_METHOD_LABEL as PAY_METHOD,
-  CANCEL_REASON_LABEL,
-} from "@/lib/labels";
+import { MEMBER_STATUS_COLOR as STATUS_COLOR } from "@/lib/labels";
 
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -41,6 +36,8 @@ export default async function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { user, db } = await getGymDb();
+  const t = await getT();
+  const locale = await getLocale();
   const { id } = await params;
 
   await ensurePendingPayments(id);
@@ -104,7 +101,7 @@ export default async function MemberDetailPage({
             className="btn-ghost inline-flex items-center gap-1.5"
           >
             <Pencil className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Redaktə</span>
+            <span className="hidden sm:inline">{t("rowActions.edit")}</span>
           </Link>
         }
       />
@@ -114,7 +111,7 @@ export default async function MemberDetailPage({
           href="/members"
           className="inline-flex items-center text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
         >
-          <ChevronLeft className="w-4 h-4" /> Üzvlər
+          <ChevronLeft className="w-4 h-4" /> {t("nav.members")}
         </Link>
 
         <section className="card p-5">
@@ -126,29 +123,29 @@ export default async function MemberDetailPage({
         </section>
 
         <section className="card p-5 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <Info label="Status">
+          <Info label={t("members.colStatus")}>
             <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[effStatus]}`}>
-              {STATUS_LABEL[effStatus]}
+              {t(`status.${effStatus}`)}
             </span>
           </Info>
-          <Info label="Plan" value={PLAN_LABEL[member.planType]} />
-          <Info label="Qiymət" value={formatAZN(member.planPrice)} />
-          <Info label="Başlama" value={fmtDate(member.startDate)} />
-          <Info label="Bitmə" value={fmtDate(member.expiryDate)} />
+          <Info label={t("memberForm.plan")} value={t(`plan.${member.planType}`)} />
+          <Info label={t("memberDetail.price")} value={formatAZN(member.planPrice)} />
+          <Info label={t("memberDetail.start")} value={fmtDate(member.startDate)} />
+          <Info label={t("members.colExpiry")} value={fmtDate(member.expiryDate)} />
           {member.email && <Info label="Email" value={member.email} />}
           {member.notes && (
             <div className="col-span-2 sm:col-span-3">
-              <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">Qeyd</div>
+              <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{t("memberDetail.notes")}</div>
               <div className="text-sm">{member.notes}</div>
             </div>
           )}
         </section>
 
         <section className="card p-5">
-          <h2 className="font-medium mb-3">QR keçid kartı</h2>
+          <h2 className="font-medium mb-3">{t("memberDetail.qrCard")}</h2>
           <div className="flex flex-wrap items-center gap-2">
             <Link href={passUrl} target="_blank" className="btn-ghost inline-flex items-center gap-1.5">
-              <ExternalLink className="w-3.5 h-3.5" /> Kartı aç
+              <ExternalLink className="w-3.5 h-3.5" /> {t("memberDetail.openCard")}
             </Link>
             <a
               href={waUrl}
@@ -156,7 +153,7 @@ export default async function MemberDetailPage({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-4 py-2 text-sm font-medium"
             >
-              <MessageCircle className="w-3.5 h-3.5" /> WhatsApp ilə göndər
+              <MessageCircle className="w-3.5 h-3.5" /> {t("memberDetail.sendWhatsapp")}
             </a>
           </div>
           <code className="block text-[11px] text-[var(--muted)] break-all mt-3">{passUrl}</code>
@@ -164,19 +161,19 @@ export default async function MemberDetailPage({
             <p
               className={`text-[11px] mt-2 ${transferCount >= 5 ? "text-amber-600" : "text-[var(--muted)]"}`}
             >
-              Kart {transferCount} dəfə köçürülüb
-              {lastTransfer ? ` · son: ${fmtDate(lastTransfer.createdAt)}` : ""}
+              {t("memberDetail.transferred", { count: transferCount })}
+              {lastTransfer ? ` · ${t("memberDetail.lastTransfer", { date: fmtDate(lastTransfer.createdAt) })}` : ""}
             </p>
           )}
         </section>
 
         <section className="card p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-            <h2 className="font-medium">Ödənişlər</h2>
+            <h2 className="font-medium">{t("nav.payments")}</h2>
             <RenewButton memberId={member.id} expiryDate={member.expiryDate.toISOString()} />
           </div>
           {member.payments.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Hələ ödəniş qeydiyyatı yoxdur.</p>
+            <p className="text-sm text-[var(--muted)]">{t("memberDetail.noPayments")}</p>
           ) : (
             <ul className="divide-y divide-[var(--border)]">
               {member.payments.map((p) => {
@@ -189,21 +186,26 @@ export default async function MemberDetailPage({
                   >
                     <div>
                       <div className="font-medium text-sm">
-                        {formatPeriodLabel(p.dueDate, member.planType)}
+                        {formatPeriodLabel(p.dueDate, member.planType, locale)}
                       </div>
                       <div className="text-[11px] text-[var(--muted)]">
                         {formatAZN(p.amount)} ·{" "}
                         {isPaid
-                          ? `Ödənildi ${p.paidAt?.toISOString().slice(0, 10)}${p.method ? ` (${PAY_METHOD[p.method]})` : ""}`
+                          ? p.method
+                            ? t("memberDetail.paidOnMethod", {
+                                date: p.paidAt?.toISOString().slice(0, 10) ?? "",
+                                method: t(`method.${p.method}`),
+                              })
+                            : t("memberDetail.paidOn", { date: p.paidAt?.toISOString().slice(0, 10) ?? "" })
                           : eff === "OVERDUE"
-                            ? `Vaxtı keçib (${p.dueDate.toISOString().slice(0, 10)})`
-                            : `Gözlənilir: ${p.dueDate.toISOString().slice(0, 10)}`}
+                            ? t("memberDetail.overdueOn", { date: p.dueDate.toISOString().slice(0, 10) })
+                            : t("memberDetail.pendingOn", { date: p.dueDate.toISOString().slice(0, 10) })}
                       </div>
                     </div>
                     {isPaid ? (
                       <form action={unmarkPayment.bind(null, p.id)}>
                         <button className="text-xs text-[var(--muted)] underline">
-                          Geri al
+                          {t("memberDetail.undo")}
                         </button>
                       </form>
                     ) : (
@@ -216,12 +218,12 @@ export default async function MemberDetailPage({
                           defaultValue="CASH"
                           className="border border-[var(--border)] rounded-md px-2 py-1 text-sm bg-white"
                         >
-                          <option value="CASH">Nağd</option>
-                          <option value="CARD">Kart</option>
-                          <option value="TRANSFER">Köçürmə</option>
+                          <option value="CASH">{t("method.CASH")}</option>
+                          <option value="CARD">{t("method.CARD")}</option>
+                          <option value="TRANSFER">{t("method.TRANSFER")}</option>
                         </select>
                         <button className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-full px-3 py-1.5">
-                          Ödənildi
+                          {t("memberDetail.markPaid")}
                         </button>
                       </form>
                     )}
@@ -234,7 +236,7 @@ export default async function MemberDetailPage({
 
         <section className="card p-5">
           <h2 className="font-medium mb-3 flex items-center gap-2">
-            <Snowflake className="w-4 h-4 text-sky-600" /> Dondurma
+            <Snowflake className="w-4 h-4 text-sky-600" /> {t("memberDetail.freeze")}
           </h2>
           <form action={freezeAction} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
             <input
@@ -253,14 +255,14 @@ export default async function MemberDetailPage({
             <input
               type="text"
               name="reason"
-              placeholder="Səbəb (ixtiyari)"
+              placeholder={t("memberDetail.reasonPlaceholder")}
               className="px-3 py-2 border border-[var(--border)] rounded-md text-sm sm:col-span-1"
             />
             <button
               type="submit"
               className="bg-sky-600 hover:bg-sky-700 text-white rounded-full px-3 py-2 text-sm font-medium"
             >
-              Dondur
+              {t("memberDetail.freezeSubmit")}
             </button>
           </form>
           {member.freezes.length > 0 && (
@@ -277,11 +279,11 @@ export default async function MemberDetailPage({
 
         {member.status === "CANCELLED" && member.cancelReason && (
           <section className="card p-5 border-red-100 bg-red-50/40">
-            <h2 className="font-medium text-red-800 mb-1">Ləğvetmə məlumatı</h2>
+            <h2 className="font-medium text-red-800 mb-1">{t("memberDetail.cancelInfo")}</h2>
             <p className="text-sm">
-              <span className="text-[var(--muted)]">Səbəb:</span>{" "}
+              <span className="text-[var(--muted)]">{t("memberDetail.reasonLabel")}</span>{" "}
               <span className="font-medium">
-                {CANCEL_REASON_LABEL[member.cancelReason] ?? member.cancelReason}
+                {t(`cancelReason.${member.cancelReason}`)}
               </span>
               {member.cancelledAt && (
                 <span className="text-[var(--muted)]">
@@ -304,7 +306,7 @@ export default async function MemberDetailPage({
           ) : (
             <form action={reactivateAction}>
               <button className="px-4 py-2 border border-emerald-200 text-emerald-700 rounded-full text-sm hover:bg-emerald-50">
-                Yenidən aktiv et
+                {t("memberDetail.reactivate")}
               </button>
             </form>
           )}

@@ -3,8 +3,11 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { prisma, type Tx } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/session";
+import { isLocale } from "@/lib/i18n";
+import { LOCALE_COOKIE } from "@/lib/i18n-server";
 import { signupSchema, loginSchema } from "@/lib/validators";
 import { generateToken, hashToken, makeExpiry, RESET_TTL_HOURS, INVITE_TTL_HOURS } from "@/lib/tokens";
 import { sendResetEmail, sendInviteEmail } from "@/lib/email";
@@ -123,6 +126,12 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
     gymId: user.gymId,
     role: user.role,
   });
+  // Carry the user's saved language into the cookie so the UI loads in their
+  // preference immediately (the cookie is the per-request source of truth).
+  if (isLocale(user.locale)) {
+    const store = await cookies();
+    store.set(LOCALE_COOKIE, user.locale, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  }
   redirect(user.role === "STAFF" ? "/scan" : "/dashboard");
 }
 

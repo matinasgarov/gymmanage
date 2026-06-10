@@ -23,12 +23,19 @@ export async function markPaymentPaid(paymentId: string, formData: FormData) {
   });
   if (!payment || payment.status === "PAID") return;
 
+  // Orphaned payment (member was deleted, history kept): just record the
+  // payment — there is no member to advance.
+  const member = payment.member;
+
   // Renewal: advance the membership to cover the period just paid. Monotonic
   // (max) so paying an older period never shrinks expiry and freeze-extended
   // expiry is preserved.
-  const periodEnd = addPlanDays(payment.dueDate, payment.member.planType);
-  const newExpiry =
-    periodEnd > payment.member.expiryDate ? periodEnd : payment.member.expiryDate;
+  const newExpiry = member
+    ? (() => {
+        const periodEnd = addPlanDays(payment.dueDate, member.planType);
+        return periodEnd > member.expiryDate ? periodEnd : member.expiryDate;
+      })()
+    : null;
 
   await db.$transaction(async (tx) => {
     await tx.payment.update({
@@ -40,10 +47,12 @@ export async function markPaymentPaid(paymentId: string, formData: FormData) {
         recordedById: user.id,
       },
     });
-    await tx.member.update({
-      where: { id: payment.memberId },
-      data: { status: "ACTIVE", expiryDate: newExpiry },
-    });
+    if (payment.memberId && newExpiry) {
+      await tx.member.update({
+        where: { id: payment.memberId },
+        data: { status: "ACTIVE", expiryDate: newExpiry },
+      });
+    }
     await tx.auditLog.create({
       data: {
         gymId: user.gymId,
@@ -103,8 +112,11 @@ export async function renewMembership(memberId: string, formData: FormData) {
     dueDate = addPlanDays(latest ? latest.dueDate : member.startDate, member.planType);
   }
 
-  const periodEnd = addPlanDays(dueDate, member.planType);
-  const newExpiry = periodEnd > member.expiryDate ? periodEnd : member.expiryDate;
+  // Access resets to exactly one plan length from the renewal moment. We do NOT
+  // compound onto the previous cycle or the start-date grid: an early renewer
+  // forfeits the days they had left and gets a fresh full period from today.
+  // (The payment row above stays period-anchored for billing accounting.)
+  const newExpiry = addPlanDays(new Date(), member.planType);
 
   await db.$transaction(async (tx) => {
     if (unpaid) {

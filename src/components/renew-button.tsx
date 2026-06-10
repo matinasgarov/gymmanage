@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { renewMembership } from "@/lib/payment-actions";
+import { useT, useLocale } from "@/components/i18n-provider";
 
 // Renew control with an early-renewal guard: if the membership is still valid
 // (now < expiry), confirm before recording another period so the owner doesn't
@@ -13,6 +14,8 @@ export function RenewButton({
   memberId: string;
   expiryDate: string; // ISO
 }) {
+  const t = useT();
+  const locale = useLocale();
   const [pending, start] = useTransition();
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -20,9 +23,8 @@ export function RenewButton({
     const fd = new FormData(e.currentTarget);
     const expiry = new Date(expiryDate);
     if (new Date() < expiry) {
-      const left = expiry.toLocaleDateString("az");
       const ok = window.confirm(
-        `Üzvlüyün hələ ${left} tarixinə qədər keçərlidir. Yenə də yeniləmək istəyirsiniz?`
+        t("renew.confirm", { date: expiry.toLocaleDateString(locale) })
       );
       if (!ok) return;
     }
@@ -33,18 +35,18 @@ export function RenewButton({
 
   return (
     <form onSubmit={onSubmit} className="flex items-center gap-2">
-      <span className="text-xs text-[var(--muted)]">Üzvlüyü yenilə:</span>
+      <span className="text-xs text-[var(--muted)]">{t("renew.prompt")}</span>
       <select
         name="method"
         defaultValue="CASH"
         className="border border-[var(--border)] rounded-md px-2 py-1 text-sm bg-white"
       >
-        <option value="CASH">Nağd</option>
-        <option value="CARD">Kart</option>
-        <option value="TRANSFER">Köçürmə</option>
+        <option value="CASH">{t("method.CASH")}</option>
+        <option value="CARD">{t("method.CARD")}</option>
+        <option value="TRANSFER">{t("method.TRANSFER")}</option>
       </select>
       <button type="submit" disabled={pending} className="btn-brand disabled:opacity-50">
-        {pending ? "Yenilənir…" : "Yenilə"}
+        {pending ? t("renew.renewing") : t("renew.submit")}
       </button>
     </form>
   );

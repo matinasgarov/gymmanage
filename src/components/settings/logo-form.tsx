@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { Camera, Trash2 } from "lucide-react";
 import { uploadGymLogo, removeGymLogo } from "@/lib/settings-actions";
+import { useT } from "@/components/i18n-provider";
 
 const MAX_SIDE = 400;
 
@@ -31,6 +32,7 @@ export function LogoForm({
   currentUrl: string | null;
   gymName: string;
 }) {
+  const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(currentUrl);
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +49,13 @@ export function LogoForm({
       startTransition(async () => {
         const res = await uploadGymLogo(undefined, fd);
         if (res?.ok) {
-          // Re-read by reload — server revalidates the path
           setPreview(URL.createObjectURL(resized));
         } else if (res?.message) {
           setError(res.message);
         }
       });
     } catch {
-      setError("Şəkli emal edə bilmədik.");
+      setError(t("settings.logoError"));
     } finally {
       if (fileInput.current) fileInput.current.value = "";
     }
@@ -86,7 +87,7 @@ export function LogoForm({
             className="btn-ghost inline-flex items-center gap-1.5"
           >
             <Camera className="w-3.5 h-3.5" />
-            {preview ? "Loqonu dəyiş" : "Loqo əlavə et"}
+            {preview ? t("settings.logoChange") : t("settings.logoAdd")}
           </button>
           {preview && (
             <button
@@ -96,14 +97,12 @@ export function LogoForm({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 rounded-full text-sm hover:bg-red-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Sil
+              {t("common.delete")}
             </button>
           )}
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
-        <p className="text-[11px] text-[var(--muted)]">
-          Yan paneldə və üzv kartında görünəcək.
-        </p>
+        <p className="text-[11px] text-[var(--muted)]">{t("settings.logoHint")}</p>
       </div>
       <input
         ref={fileInput}

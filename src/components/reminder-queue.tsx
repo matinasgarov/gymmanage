@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, MessageCircle, SkipForward, ExternalLink } from "lucide-react";
 import { recordReminderSent } from "@/lib/reminder-actions";
 import { buildWaUrl, pickTemplate, renderTemplate } from "@/lib/templates";
+import { useT } from "@/components/i18n-provider";
 
 export type ReminderItem = {
   paymentId: string;
@@ -23,6 +24,7 @@ export function ReminderQueue({
   gymName: string;
   reminderTemplate: string | null;
 }) {
+  const t = useT();
   const [index, setIndex] = useState(0);
   const [sentCount, setSentCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
@@ -47,10 +49,8 @@ export function ReminderQueue({
     return (
       <div className="card p-10 text-center max-w-md mx-auto">
         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-        <h2 className="font-semibold mb-1">Borclu yoxdur 🎉</h2>
-        <p className="text-sm text-[var(--muted)]">
-          Bütün ödənişlər təsdiqlənib. Yaxşı iş!
-        </p>
+        <h2 className="font-semibold mb-1">{t("reminders.allClear")}</h2>
+        <p className="text-sm text-[var(--muted)]">{t("reminders.allClearSub")}</p>
       </div>
     );
   }
@@ -59,9 +59,9 @@ export function ReminderQueue({
     return (
       <div className="card p-10 text-center max-w-md mx-auto">
         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-        <h2 className="font-semibold mb-1">Hamısı tamamlandı</h2>
+        <h2 className="font-semibold mb-1">{t("reminders.allDone")}</h2>
         <p className="text-sm text-[var(--muted)]">
-          {sentCount} xatırlatma göndərildi, {skippedCount} atlandı.
+          {t("reminders.allDoneSub", { sent: sentCount, skipped: skippedCount })}
         </p>
         <button
           onClick={() => {
@@ -71,7 +71,7 @@ export function ReminderQueue({
           }}
           className="btn-ghost mt-4"
         >
-          Yenidən başla
+          {t("reminders.restart")}
         </button>
       </div>
     );
@@ -98,7 +98,7 @@ export function ReminderQueue({
             {index + 1} / {total}
           </span>
           <span>
-            ✓ {sentCount} · ⤴ {skippedCount} · {remaining} qalıb
+            ✓ {sentCount} · ⤴ {skippedCount} · {t("reminders.remaining", { count: remaining })}
           </span>
         </div>
         <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
@@ -119,9 +119,12 @@ export function ReminderQueue({
         </p>
 
         <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
-          <Stat label="Dövr" value={current.period} />
-          <Stat label="Məbləğ" value={`${current.amount.toFixed(2)}₼`} />
-          <Stat label="Gecikmə" value={`${current.daysLate} gün`} />
+          <Stat label={t("reminders.statPeriod")} value={current.period} />
+          <Stat label={t("reminders.statAmount")} value={`${current.amount.toFixed(2)}₼`} />
+          <Stat
+            label={t("reminders.statDelay")}
+            value={t("units.days", { count: current.daysLate })}
+          />
         </div>
 
         <a
@@ -132,13 +135,16 @@ export function ReminderQueue({
           className="mt-5 inline-flex items-center justify-center gap-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-full py-3 font-semibold"
         >
           <MessageCircle className="w-4 h-4" />
-          WhatsApp ilə göndər
+          {t("reminders.sendWhatsapp")}
         </a>
 
         <div className="grid grid-cols-2 gap-2 mt-2">
-          <button onClick={onSkip} className="btn-ghost inline-flex items-center justify-center gap-1.5">
+          <button
+            onClick={onSkip}
+            className="btn-ghost inline-flex items-center justify-center gap-1.5"
+          >
             <SkipForward className="w-3.5 h-3.5" />
-            Atla
+            {t("reminders.skip")}
           </button>
           <Link
             href={`/members/${current.member.id}`}
@@ -146,13 +152,11 @@ export function ReminderQueue({
             className="btn-ghost inline-flex items-center justify-center gap-1.5"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            Profilə bax
+            {t("reminders.viewProfile")}
           </Link>
         </div>
 
-        <p className="text-[11px] text-[var(--muted)] mt-3">
-          WhatsApp düyməsinə basanda növbəti üzvə keçəcək.
-        </p>
+        <p className="text-[11px] text-[var(--muted)] mt-3">{t("reminders.advanceHint")}</p>
       </div>
     </div>
   );

@@ -290,6 +290,9 @@ export async function deleteMember(memberId: string, formData: FormData) {
   const { user, db } = await getOwnerDb();
 
   const typed = String(formData.get("confirmName") ?? "").trim();
+  // Off by default: keep the paid-payment history so deleting a member never
+  // erases past revenue. The admin must opt in to also wiping payments.
+  const deletePayments = formData.get("deletePayments") === "true";
 
   const member = await db.member.findFirst({
     where: { id: memberId },
@@ -315,14 +318,36 @@ export async function deleteMember(memberId: string, formData: FormData) {
           phone: member.phone,
           planType: member.planType,
           status: member.status,
+          deletedPayments: deletePayments,
         },
       },
     });
-    // Cascades to Payment, CheckIn, Freeze (all onDelete: Cascade in schema).
+
+    if (deletePayments) {
+      // Explicit wipe: the FK is SetNull now, so payments won't cascade away —
+      // remove them deliberately.
+      await tx.payment.deleteMany({ where: { memberId } });
+    } else {
+      // Keep payments: stamp the identity onto each row while the link still
+      // exists, then the member.delete below nulls memberId (SetNull).
+      await tx.payment.updateMany({
+        where: { memberId },
+        data: {
+          memberName: member.name,
+          memberPublicId: member.publicId,
+          memberPlanType: member.planType,
+        },
+      });
+    }
+
+    // CheckIn + Freeze still cascade-delete (attendance/freeze are not financial
+    // records). Payments either were deleted above or detach via SetNull.
     await tx.member.delete({ where: { id: memberId } });
   });
 
   revalidatePath("/members");
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
   redirect("/members");
 }
 

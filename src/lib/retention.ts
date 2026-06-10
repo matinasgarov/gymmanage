@@ -41,7 +41,7 @@ export async function getRetentionData(gymId: string): Promise<RetentionData> {
   const [activeMembers, lastGranted, lapsedMembers] = await Promise.all([
     db.member.findMany({
       where: { status: "ACTIVE" },
-      select: { id: true, name: true, phone: true, publicId: true, photoUrl: true },
+      select: { id: true, name: true, phone: true, publicId: true, photoUrl: true, startDate: true },
     }),
     db.checkIn.groupBy({
       by: ["memberId"],
@@ -79,11 +79,17 @@ export async function getRetentionData(gymId: string): Promise<RetentionData> {
 
   const ghosters: MemberAtRisk[] = [];
   for (const m of activeMembers) {
+    const { startDate, ...info } = m;
     const seen = lastSeen.get(m.id);
     if (!seen) {
-      ghosters.push({ ...m, daysSince: null }); // never entered
+      // Never entered. Only at risk once they've been a member longer than the
+      // threshold — measure the grace window from their start date so a member
+      // who just joined isn't flagged before they've had a chance to come.
+      if (startDate < ghosterCutoff) {
+        ghosters.push({ ...info, daysSince: null });
+      }
     } else if (seen < ghosterCutoff) {
-      ghosters.push({ ...m, daysSince: daysBetween(seen, now) });
+      ghosters.push({ ...info, daysSince: daysBetween(seen, now) });
     }
   }
   // Most at risk first: never-entered (null) on top, then longest absence.

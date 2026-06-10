@@ -3,11 +3,9 @@ import { Users, Plus, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
-import {
-  MEMBER_STATUS_LABEL as STATUS_LABEL,
-  MEMBER_STATUS_COLOR as STATUS_COLOR,
-  PLAN_LABEL,
-} from "@/lib/labels";
+import { getT } from "@/lib/i18n-server";
+import type { TFunction } from "@/lib/i18n";
+import { MEMBER_STATUS_COLOR as STATUS_COLOR } from "@/lib/labels";
 import { PLAN_TYPES } from "@/config/gym-plans";
 import {
   getMembersList,
@@ -27,18 +25,13 @@ import { MemberRowActions } from "@/components/member-row-actions";
 import { Chip, Pagination } from "@/components/list-controls";
 import { UrlSelect } from "@/components/url-select";
 
-const STATUS_CHIPS: { value: MemberStatusFilter; label: string }[] = [
-  { value: "all", label: "Hamısı" },
-  { value: "active", label: "Aktiv" },
-  { value: "overdue", label: "Borclu" },
-  { value: "expiring", label: "Bitməkdə" },
-  { value: "expired", label: "Bitib" },
-  { value: "frozen", label: "Dondurulmuş" },
-];
-
-const PLAN_OPTIONS = [
-  { value: "", label: "Bütün planlar" },
-  ...PLAN_TYPES.map((p) => ({ value: p, label: PLAN_LABEL[p] })),
+const STATUS_CHIPS: { value: MemberStatusFilter; labelKey: string }[] = [
+  { value: "all", labelKey: "common.all" },
+  { value: "active", labelKey: "status.ACTIVE" },
+  { value: "overdue", labelKey: "status.OVERDUE" },
+  { value: "expiring", labelKey: "members.filterExpiring" },
+  { value: "expired", labelKey: "status.EXPIRED" },
+  { value: "frozen", labelKey: "members.filterFrozen" },
 ];
 
 // Build a /members URL from the current state plus overrides. Defaults are
@@ -84,7 +77,12 @@ export default async function MembersPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const user = await getCurrentUser();
+  const t = await getT();
   const sp = await searchParams;
+  const PLAN_OPTIONS = [
+    { value: "", label: t("members.allPlans") },
+    ...PLAN_TYPES.map((p) => ({ value: p, label: t(`plan.${p}`) })),
+  ];
   const r = await getMembersList(user.gymId, {
     q: sp.q,
     status: sp.status,
@@ -97,14 +95,14 @@ export default async function MembersPage({
   return (
     <AppShell>
       <PageHeader
-        title="Üzvlər"
-        subtitle={`${r.total} üzv${r.q ? ` · "${r.q}"` : ""}`}
+        title={t("nav.members")}
+        subtitle={`${t("members.count", { count: r.total })}${r.q ? ` · "${r.q}"` : ""}`}
         icon={Users}
         tone="dark"
         actions={
           <Link href="/members/new" className="btn-brand inline-flex items-center gap-1.5">
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Yeni üzv</span>
+            <span className="hidden sm:inline">{t("members.newMember")}</span>
           </Link>
         }
       />
@@ -117,7 +115,7 @@ export default async function MembersPage({
             <input
               name="q"
               defaultValue={r.q}
-              placeholder="Ad, telefon və ya ID ilə axtarış…"
+              placeholder={t("members.searchPlaceholder")}
               className="flex-1 outline-none text-sm bg-transparent"
             />
             {/* Preserve active filters/sort on search; page resets (no page input). */}
@@ -126,7 +124,7 @@ export default async function MembersPage({
             {r.sort !== "expiry" && <input type="hidden" name="sort" value={r.sort} />}
             {r.dir !== "asc" && <input type="hidden" name="dir" value={r.dir} />}
             <button type="submit" className="text-xs text-[var(--brand-strong)] font-medium px-2">
-              Axtar
+              {t("common.search")}
             </button>
           </form>
 
@@ -136,7 +134,7 @@ export default async function MembersPage({
                 key={c.value}
                 href={buildHref(r, { status: c.value === "all" ? null : c.value, page: null })}
                 active={r.status === c.value}
-                label={c.label}
+                label={t(c.labelKey)}
               />
             ))}
             <div className="ml-auto">
@@ -144,7 +142,7 @@ export default async function MembersPage({
                 param="plan"
                 value={r.plan ?? ""}
                 options={PLAN_OPTIONS}
-                ariaLabel="Plan filtri"
+                ariaLabel={t("members.planFilter")}
               />
             </div>
           </div>
@@ -155,12 +153,12 @@ export default async function MembersPage({
             <Users className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
             <p className="text-sm text-[var(--muted)] mb-3">
               {r.q || r.status !== "all" || r.plan
-                ? "Nəticə tapılmadı."
-                : "Hələ üzv əlavə edilməyib."}
+                ? t("members.noResults")
+                : t("members.empty")}
             </p>
             {!r.q && r.status === "all" && !r.plan && (
               <Link href="/members/new" className="btn-brand inline-block">
-                İlk üzvü əlavə et
+                {t("members.addFirst")}
               </Link>
             )}
           </div>
@@ -172,18 +170,18 @@ export default async function MembersPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
-                    <SortHeader r={r} col="name" label="Üzv" />
-                    <th className="px-4 py-2.5 font-medium">Plan</th>
-                    <th className="px-4 py-2.5 font-medium">Status</th>
-                    <SortHeader r={r} col="expiry" label="Bitmə" />
-                    <th className="px-4 py-2.5 font-medium">Son giriş</th>
-                    <th className="px-4 py-2.5 font-medium">Ödəniş</th>
-                    <th className="px-4 py-2.5 font-medium w-10" aria-label="Əməliyyatlar" />
+                    <SortHeader r={r} col="name" label={t("members.colMember")} />
+                    <th className="px-4 py-2.5 font-medium">{t("members.colPlan")}</th>
+                    <th className="px-4 py-2.5 font-medium">{t("members.colStatus")}</th>
+                    <SortHeader r={r} col="expiry" label={t("members.colExpiry")} />
+                    <th className="px-4 py-2.5 font-medium">{t("members.colLastSeen")}</th>
+                    <th className="px-4 py-2.5 font-medium">{t("members.colPayment")}</th>
+                    <th className="px-4 py-2.5 font-medium w-10" aria-label={t("members.actions")} />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {r.rows.map((m) => (
-                    <TableRow key={m.id} m={m} />
+                    <TableRow key={m.id} m={m} t={t} />
                   ))}
                 </tbody>
               </table>
@@ -192,7 +190,7 @@ export default async function MembersPage({
             {/* Mobile: enriched cards */}
             <div className="card divide-y divide-[var(--border)] lg:hidden">
               {r.rows.map((m) => (
-                <CardRow key={m.id} m={m} />
+                <CardRow key={m.id} m={m} t={t} />
               ))}
             </div>
 
@@ -240,24 +238,24 @@ function Avatar({ m }: { m: MemberRow }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: TFunction }) {
   return (
     <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_COLOR[status]}`}>
-      {STATUS_LABEL[status]}
+      {t(`status.${status}`)}
     </span>
   );
 }
 
-function OverdueBadge() {
+function OverdueBadge({ t }: { t: TFunction }) {
   return (
     <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-[var(--signal-danger)] font-medium">
-      Borclu
+      {t("status.OVERDUE")}
     </span>
   );
 }
 
-function TableRow({ m }: { m: MemberRow }) {
-  const exp = expiryInfo(m.expiryDate);
+function TableRow({ m, t }: { m: MemberRow; t: TFunction }) {
+  const exp = expiryInfo(m.expiryDate, t);
   return (
     <tr className="hover:bg-[var(--background)] transition-colors">
       <td className="px-4 py-3">
@@ -269,16 +267,16 @@ function TableRow({ m }: { m: MemberRow }) {
           </div>
         </Link>
       </td>
-      <td className="px-4 py-3 text-[var(--muted)]">{PLAN_LABEL[m.planType] ?? m.planType}</td>
+      <td className="px-4 py-3 text-[var(--muted)]">{t(`plan.${m.planType}`)}</td>
       <td className="px-4 py-3">
-        <StatusBadge status={effectiveMemberStatus(m)} />
+        <StatusBadge status={effectiveMemberStatus(m)} t={t} />
       </td>
       <td className="px-4 py-3">
         <div className={`font-medium ${toneText(exp.tone)}`}>{exp.label}</div>
         <div className="text-[11px] text-[var(--muted)]">{shortDate(m.expiryDate)}</div>
       </td>
-      <td className="px-4 py-3 text-[var(--muted)]">{lastSeenLabel(m.lastCheckInAt)}</td>
-      <td className="px-4 py-3">{m.isOverdue ? <OverdueBadge /> : <span className="text-[var(--muted)]">—</span>}</td>
+      <td className="px-4 py-3 text-[var(--muted)]">{lastSeenLabel(m.lastCheckInAt, t)}</td>
+      <td className="px-4 py-3">{m.isOverdue ? <OverdueBadge t={t} /> : <span className="text-[var(--muted)]">—</span>}</td>
       <td className="px-2 py-3">
         <MemberRowActions
           memberId={m.id}
@@ -291,8 +289,8 @@ function TableRow({ m }: { m: MemberRow }) {
   );
 }
 
-function CardRow({ m }: { m: MemberRow }) {
-  const exp = expiryInfo(m.expiryDate);
+function CardRow({ m, t }: { m: MemberRow; t: TFunction }) {
+  const exp = expiryInfo(m.expiryDate, t);
   return (
     <div className="relative">
       <Link href={`/members/${m.id}`} className="block px-4 py-3 hover:bg-[var(--background)] transition-colors">
@@ -307,16 +305,16 @@ function CardRow({ m }: { m: MemberRow }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <StatusBadge status={effectiveMemberStatus(m)} />
+            <StatusBadge status={effectiveMemberStatus(m)} t={t} />
           </div>
         </div>
         <div className="mt-2.5 pt-2.5 border-t border-[var(--border)] flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-          <span className="text-[var(--muted)]">{PLAN_LABEL[m.planType] ?? m.planType}</span>
+          <span className="text-[var(--muted)]">{t(`plan.${m.planType}`)}</span>
           <span className="text-[var(--muted)]">·</span>
-          <span className={toneText(exp.tone)}>Bitmə: {exp.label}</span>
-          {m.isOverdue && <OverdueBadge />}
+          <span className={toneText(exp.tone)}>{t("members.expiryPrefix")}: {exp.label}</span>
+          {m.isOverdue && <OverdueBadge t={t} />}
           <span className="text-[var(--muted)] basis-full">
-            Son giriş: {lastSeenLabel(m.lastCheckInAt)}
+            {t("members.lastSeenPrefix")}: {lastSeenLabel(m.lastCheckInAt, t)}
           </span>
         </div>
       </Link>

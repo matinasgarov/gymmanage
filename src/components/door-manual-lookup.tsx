@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Search, X } from "lucide-react";
 import { manualLookup, grantManualEntry, type ScanResult } from "@/lib/scan-actions";
+import { useT } from "@/components/i18n-provider";
 
 type Hit = {
   id: string;
@@ -17,6 +18,7 @@ export function DoorManualLookup({
 }: {
   onResult: (r: ScanResult) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -50,7 +52,7 @@ export function DoorManualLookup({
         onClick={() => setOpen(true)}
         className="text-sm text-[var(--brand-strong)] underline"
       >
-        Telefonu olmayan üzv?
+        {t("door.noPhoneMember")}
       </button>
     );
   }
@@ -63,14 +65,14 @@ export function DoorManualLookup({
           autoFocus
           value={q}
           onChange={(e) => search(e.target.value)}
-          placeholder="Ad, telefon, ID..."
+          placeholder={t("door.searchPlaceholder")}
           className="flex-1 outline-none bg-transparent text-sm"
         />
-        <button onClick={() => setOpen(false)} aria-label="Bağla">
+        <button onClick={() => setOpen(false)} aria-label={t("common.close")}>
           <X className="w-4 h-4 text-[var(--muted)]" />
         </button>
       </div>
-      {isPending && <p className="text-xs text-[var(--muted)]">Axtarılır...</p>}
+      {isPending && <p className="text-xs text-[var(--muted)]">{t("door.searching")}</p>}
       {hits.length > 0 && (
         <ul className="divide-y divide-[var(--border)]">
           {hits.map((h) => (

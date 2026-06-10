@@ -3,35 +3,34 @@
 import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useT, useLocale } from "@/components/i18n-provider";
 
 type Point = { label: string; total: number };
 
 const RANGES = [
-  { months: 3, label: "3 ay" },
-  { months: 6, label: "6 ay" },
-  { months: 12, label: "1 il" },
+  { months: 3, labelKey: "chart.range3" },
+  { months: 6, labelKey: "chart.range6" },
+  { months: 12, labelKey: "chart.range12" },
 ] as const;
-
-function fmtAzn(n: number): string {
-  return `${n.toLocaleString("az", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
-}
-
-function titleFor(months: number): string {
-  return months === 12 ? "1 illik gəlir" : `${months} aylıq gəlir`;
-}
 
 // Full year of monthly buckets is passed in; we slice to the selected range.
 export function RevenueChart({ data }: { data: Point[] }) {
+  const t = useT();
+  const locale = useLocale();
   const [months, setMonths] = useState(6);
   const sliced = data.slice(-months);
   const total = sliced.reduce((sum, p) => sum + p.total, 0);
+
+  const fmtAzn = (n: number) =>
+    `${n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₼`;
+  const title = months === 12 ? t("chart.titleYear") : t("chart.titleMonths", { count: months });
 
   return (
     <>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-[var(--brand-strong)]" />
-          <h2 className="font-medium">{titleFor(months)}</h2>
+          <h2 className="font-medium">{title}</h2>
         </div>
         <span className="text-lg font-semibold">{fmtAzn(total)}</span>
       </div>
@@ -48,7 +47,7 @@ export function RevenueChart({ data }: { data: Point[] }) {
                 : "bg-neutral-100 text-[var(--muted)] hover:bg-neutral-200"
             }`}
           >
-            {r.label}
+            {t(r.labelKey)}
           </button>
         ))}
       </div>
@@ -66,13 +65,13 @@ export function RevenueChart({ data }: { data: Point[] }) {
               fontSize={11}
               width={52}
               tickFormatter={(v) =>
-                v >= 1000 ? `${(v / 1000).toLocaleString("az", { maximumFractionDigits: 1 })}k` : `${v}`
+                v >= 1000 ? `${(v / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })}k` : `${v}`
               }
             />
             <Tooltip
               cursor={{ fill: "rgba(0,0,0,0.04)" }}
               contentStyle={{ fontSize: 12 }}
-              formatter={(v) => [fmtAzn(Number(v ?? 0)), "Gəlir"]}
+              formatter={(v) => [fmtAzn(Number(v ?? 0)), t("chart.revenue")]}
             />
             <Bar dataKey="total" fill="#0f172a" radius={[4, 4, 0, 0]} />
           </BarChart>

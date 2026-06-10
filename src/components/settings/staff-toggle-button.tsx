@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { setStaffActive } from "@/lib/auth-actions";
+import { useT } from "@/components/i18n-provider";
 
 export function StaffToggleButton({
   staffId,
@@ -10,6 +11,7 @@ export function StaffToggleButton({
   staffId: string;
   active: boolean;
 }) {
+  const t = useT();
   const [pending, start] = useTransition();
 
   return (
@@ -18,7 +20,7 @@ export function StaffToggleButton({
       disabled={pending}
       className="text-xs underline text-[var(--muted)] disabled:opacity-40"
     >
-      {active ? "Deaktiv et" : "Aktiv et"}
+      {active ? t("settings.staffDeactivate") : t("settings.staffActivate")}
     </button>
   );
 }

@@ -2,44 +2,48 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { requireOwner } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { LogoForm } from "@/components/settings/logo-form";
 import { TemplatesForm } from "@/components/settings/templates-form";
 import { ScannerDevicesCard } from "@/components/scanner-devices-card";
 import { StaffCard } from "@/components/settings/staff-card";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 export default async function SettingsPage() {
   const user = await requireOwner();
-  const gym = await prisma.gym.findUnique({
-    where: { id: user.gymId },
-  });
+  const t = await getT();
+  const gym = await prisma.gym.findUnique({ where: { id: user.gymId } });
   if (!gym) return null;
 
   return (
     <AppShell>
       <PageHeader
-        title="Tənzimləmələr"
-        subtitle="Zal profili, loqo və WhatsApp mesaj şablonları"
+        title={t("settings.title")}
+        subtitle={t("settings.subtitle")}
         icon={SettingsIcon}
         tone="dark"
       />
 
       <div className="px-4 lg:px-8 py-6 space-y-6 max-w-2xl">
-        <Section title="Açıq qeydiyyat linki">
-          <p className="text-xs text-[var(--muted)] mb-2">
-            Bu linki Instagram bio, WhatsApp statusu və ya əmlak agentlərinə paylaşın.
-          </p>
+        <Section title={t("settings.sectionLanguage")}>
+          <p className="text-xs text-[var(--muted)] mb-3">{t("settings.languageHint")}</p>
+          <LocaleSwitcher />
+        </Section>
+
+        <Section title={t("settings.sectionJoinLink")}>
+          <p className="text-xs text-[var(--muted)] mb-2">{t("settings.joinLinkHint")}</p>
           <code className="block text-xs text-[var(--brand-strong)] break-all">
             /join/{gym.id}
           </code>
         </Section>
 
-        <Section title="Zalın loqosu">
+        <Section title={t("settings.sectionLogo")}>
           <LogoForm currentUrl={gym.logoUrl} gymName={gym.name} />
         </Section>
 
-        <Section title="Zalın profili">
+        <Section title={t("settings.sectionProfile")}>
           <ProfileForm
             defaults={{
               name: gym.name,
@@ -50,21 +54,20 @@ export default async function SettingsPage() {
           />
         </Section>
 
-        <Section title="Skanerlər">
+        <Section title={t("settings.sectionScanners")}>
           <ScannerDevicesCard />
         </Section>
 
-        <Section title="İşçilər">
-          <p className="text-xs text-[var(--muted)] mb-3">
-            İşçi əlavə edin — onlara email ilə hesab aktivləşdirmə linki göndəriləcək.
-          </p>
+        <Section title={t("settings.sectionStaff")}>
+          <p className="text-xs text-[var(--muted)] mb-3">{t("settings.staffHint")}</p>
           <StaffCard gymId={gym.id} />
         </Section>
 
-        <Section title="WhatsApp mesaj şablonları">
+        <Section title={t("settings.sectionTemplates")}>
           <p className="text-xs text-[var(--muted)] mb-3">
-            Boş saxlasanız ön təyin olunmuş Azərbaycanca mətn istifadə olunacaq.
-            Yer tutucular: <code>{"{memberName}"}</code>, <code>{"{gymName}"}</code>,{" "}
+            {t("settings.templatesHint")}{" "}
+            {t("settings.templatePlaceholders")}{" "}
+            <code>{"{memberName}"}</code>, <code>{"{gymName}"}</code>,{" "}
             <code>{"{period}"}</code>, <code>{"{amount}"}</code>,{" "}
             <code>{"{expiryDate}"}</code>, <code>{"{daysLeft}"}</code>,{" "}
             <code>{"{passUrl}"}</code>
@@ -83,13 +86,7 @@ export default async function SettingsPage() {
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="card p-5">
       <h2 className="font-medium mb-3">{title}</h2>

@@ -2,16 +2,18 @@ import { ScanLine } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
 import { Scanner } from "@/components/scanner";
 import { VisitorPassActions } from "@/components/visitor-pass-actions";
 
 export default async function ScanPage() {
   const user = await getCurrentUser();
+  const t = await getT();
   return (
     <AppShell>
       <PageHeader
-        title="QR Skaner"
-        subtitle="Üzv kartını kamera ilə oxudun"
+        title={t("scan.title")}
+        subtitle={t("scan.subtitle")}
         icon={ScanLine}
         tone="dark"
       />

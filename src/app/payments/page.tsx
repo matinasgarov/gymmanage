@@ -3,13 +3,11 @@ import { Receipt, Search, Download, ArrowUp, ArrowDown } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/dal";
+import { getT } from "@/lib/i18n-server";
+import type { TFunction } from "@/lib/i18n";
 import { formatAZN } from "@/lib/members";
 import { waReminderUrl } from "@/lib/dashboard";
-import {
-  PAYMENT_STATUS_COLOR as STATUS_COLOR,
-  PAYMENT_STATUS_LABEL as STATUS_LABEL,
-  PAY_METHOD_LABEL as PAY_METHOD,
-} from "@/lib/labels";
+import { PAYMENT_STATUS_COLOR as STATUS_COLOR } from "@/lib/labels";
 import {
   getPaymentsList,
   type PaymentsListResult,
@@ -20,25 +18,11 @@ import {
 import { Chip, Pagination } from "@/components/list-controls";
 import { UrlSelect } from "@/components/url-select";
 
-const STATUS_CHIPS: { value: PaymentStatusFilter; label: string }[] = [
-  { value: "all", label: "Hamısı" },
-  { value: "paid", label: "Ödənilmiş" },
-  { value: "unpaid", label: "Ödənilməmiş" },
-  { value: "overdue", label: "Vaxtı keçib" },
-];
-
-const METHOD_OPTIONS = [
-  { value: "", label: "Bütün üsullar" },
-  { value: "CASH", label: "Nağd" },
-  { value: "CARD", label: "Kart" },
-  { value: "TRANSFER", label: "Köçürmə" },
-];
-
-const RANGE_OPTIONS = [
-  { value: "", label: "Bütün vaxt" },
-  { value: "this_month", label: "Bu ay" },
-  { value: "last_month", label: "Keçən ay" },
-  { value: "this_year", label: "Bu il" },
+const STATUS_CHIPS: { value: PaymentStatusFilter; labelKey: string }[] = [
+  { value: "all", labelKey: "common.all" },
+  { value: "paid", labelKey: "payments.filterPaid" },
+  { value: "unpaid", labelKey: "payments.filterUnpaid" },
+  { value: "overdue", labelKey: "paymentStatus.OVERDUE" },
 ];
 
 function naturalDir(sort: PaymentSort): "asc" | "desc" {
@@ -92,7 +76,20 @@ export default async function PaymentsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const user = await getCurrentUser();
+  const t = await getT();
   const sp = await searchParams;
+  const METHOD_OPTIONS = [
+    { value: "", label: t("payments.allMethods") },
+    { value: "CASH", label: t("method.CASH") },
+    { value: "CARD", label: t("method.CARD") },
+    { value: "TRANSFER", label: t("method.TRANSFER") },
+  ];
+  const RANGE_OPTIONS = [
+    { value: "", label: t("payments.allTime") },
+    { value: "this_month", label: t("payments.thisMonth") },
+    { value: "last_month", label: t("payments.lastMonth") },
+    { value: "this_year", label: t("payments.thisYear") },
+  ];
   const r = await getPaymentsList(user.gymId, {
     q: sp.q,
     status: sp.status,
@@ -105,14 +102,14 @@ export default async function PaymentsPage({
 
   return (
     <AppShell>
-      <PageHeader title="Ödənişlər" subtitle={user.gym.name} icon={Receipt} tone="dark" />
+      <PageHeader title={t("nav.payments")} subtitle={user.gym.name} icon={Receipt} tone="dark" />
 
       <div className="px-4 lg:px-8 py-6 space-y-4">
         {/* Summary cards — recompute with the active filter. */}
         <section className="grid grid-cols-3 gap-3">
-          <SummaryCard label="Yığılan" value={formatAZN(r.summary.collected)} />
-          <SummaryCard label="Ödəniş sayı" value={String(r.summary.paidCount)} />
-          <SummaryCard label="Ödəyən üzv" value={String(r.summary.payingMembers)} />
+          <SummaryCard label={t("payments.collected")} value={formatAZN(r.summary.collected)} />
+          <SummaryCard label={t("payments.paidCount")} value={String(r.summary.paidCount)} />
+          <SummaryCard label={t("payments.payingMembers")} value={String(r.summary.payingMembers)} />
         </section>
 
         {/* Toolbar */}
@@ -123,7 +120,7 @@ export default async function PaymentsPage({
               <input
                 name="q"
                 defaultValue={r.q}
-                placeholder="Ad və ya ID ilə axtar…"
+                placeholder={t("payments.searchPlaceholder")}
                 className="flex-1 outline-none text-sm bg-transparent"
               />
               {r.status !== "all" && <input type="hidden" name="status" value={r.status} />}
@@ -131,7 +128,7 @@ export default async function PaymentsPage({
               {r.range !== "all" && <input type="hidden" name="range" value={r.range} />}
               {r.sort !== "date" && <input type="hidden" name="sort" value={r.sort} />}
               <button type="submit" className="text-xs text-[var(--brand-strong)] font-medium px-2">
-                Axtar
+                {t("common.search")}
               </button>
             </form>
             <a
@@ -140,7 +137,7 @@ export default async function PaymentsPage({
               download
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">CSV ixrac</span>
+              <span className="hidden sm:inline">{t("payments.exportCsv")}</span>
             </a>
           </div>
 
@@ -150,7 +147,7 @@ export default async function PaymentsPage({
                 key={c.value}
                 href={buildHref(r, { status: c.value === "all" ? null : c.value, page: null })}
                 active={r.status === c.value}
-                label={c.label}
+                label={t(c.labelKey)}
               />
             ))}
             <div className="ml-auto flex items-center gap-1.5">
@@ -158,13 +155,13 @@ export default async function PaymentsPage({
                 param="method"
                 value={r.method ?? ""}
                 options={METHOD_OPTIONS}
-                ariaLabel="Üsul filtri"
+                ariaLabel={t("payments.methodFilter")}
               />
               <UrlSelect
                 param="range"
                 value={r.range === "all" ? "" : r.range}
                 options={RANGE_OPTIONS}
-                ariaLabel="Tarix aralığı"
+                ariaLabel={t("payments.rangeFilter")}
               />
             </div>
           </div>
@@ -173,7 +170,7 @@ export default async function PaymentsPage({
         {r.rows.length === 0 ? (
           <div className="card p-10 text-center">
             <Receipt className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--muted)]">Nəticə tapılmadı.</p>
+            <p className="text-sm text-[var(--muted)]">{t("members.noResults")}</p>
           </div>
         ) : (
           <>
@@ -182,18 +179,18 @@ export default async function PaymentsPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
-                    <SortHeader r={r} col="name" label="Üzv" />
-                    <th className="px-4 py-2.5 font-medium">Period</th>
-                    <SortHeader r={r} col="date" label="Tarix" />
-                    <th className="px-4 py-2.5 font-medium">Üsul</th>
-                    <SortHeader r={r} col="amount" label="Məbləğ" />
-                    <th className="px-4 py-2.5 font-medium">Status</th>
-                    <th className="px-4 py-2.5 font-medium w-16" aria-label="Əməliyyat" />
+                    <SortHeader r={r} col="name" label={t("members.colMember")} />
+                    <th className="px-4 py-2.5 font-medium">{t("payments.colPeriod")}</th>
+                    <SortHeader r={r} col="date" label={t("payments.colDate")} />
+                    <th className="px-4 py-2.5 font-medium">{t("payments.colMethod")}</th>
+                    <SortHeader r={r} col="amount" label={t("payments.colAmount")} />
+                    <th className="px-4 py-2.5 font-medium">{t("members.colStatus")}</th>
+                    <th className="px-4 py-2.5 font-medium w-16" aria-label={t("members.actions")} />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {r.rows.map((p) => (
-                    <TableRow key={p.id} p={p} gym={user.gym} />
+                    <TableRow key={p.id} p={p} gym={user.gym} t={t} />
                   ))}
                 </tbody>
               </table>
@@ -202,7 +199,7 @@ export default async function PaymentsPage({
             {/* Mobile cards */}
             <div className="card divide-y divide-[var(--border)] lg:hidden">
               {r.rows.map((p) => (
-                <CardRow key={p.id} p={p} gym={user.gym} />
+                <CardRow key={p.id} p={p} gym={user.gym} t={t} />
               ))}
             </div>
 
@@ -252,15 +249,15 @@ function SortHeader({
   );
 }
 
-function StatusBadge({ eff }: { eff: string }) {
+function StatusBadge({ eff, t }: { eff: string; t: TFunction }) {
   return (
     <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_COLOR[eff]}`}>
-      {STATUS_LABEL[eff]}
+      {t(`paymentStatus.${eff}`)}
     </span>
   );
 }
 
-function WhatsAppNudge({ p, gym }: { p: PaymentRow; gym: GymForReminder }) {
+function WhatsAppNudge({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunction }) {
   if (p.eff === "PAID" || !p.phone) return <span className="text-[var(--muted)]">—</span>;
   const url = waReminderUrl(
     gym,
@@ -277,7 +274,7 @@ function WhatsAppNudge({ p, gym }: { p: PaymentRow; gym: GymForReminder }) {
       rel="noopener noreferrer"
       className="text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-3 py-1 shrink-0"
     >
-      WhatsApp
+      {t("common.whatsapp")}
     </a>
   );
 }
@@ -286,7 +283,7 @@ function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function TableRow({ p, gym }: { p: PaymentRow; gym: GymForReminder }) {
+function TableRow({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunction }) {
   return (
     <tr className="hover:bg-[var(--background)] transition-colors">
       <td className="px-4 py-3">
@@ -297,19 +294,19 @@ function TableRow({ p, gym }: { p: PaymentRow; gym: GymForReminder }) {
       </td>
       <td className="px-4 py-3 text-[var(--muted)]">{p.periodLabel}</td>
       <td className="px-4 py-3 text-[var(--muted)]">{p.paidAt ? fmtDate(p.paidAt) : "—"}</td>
-      <td className="px-4 py-3 text-[var(--muted)]">{p.method ? PAY_METHOD[p.method] : "—"}</td>
+      <td className="px-4 py-3 text-[var(--muted)]">{p.method ? t(`method.${p.method}`) : "—"}</td>
       <td className="px-4 py-3 font-medium">{formatAZN(p.amount)}</td>
       <td className="px-4 py-3">
-        <StatusBadge eff={p.eff} />
+        <StatusBadge eff={p.eff} t={t} />
       </td>
       <td className="px-4 py-3">
-        <WhatsAppNudge p={p} gym={gym} />
+        <WhatsAppNudge p={p} gym={gym} t={t} />
       </td>
     </tr>
   );
 }
 
-function CardRow({ p, gym }: { p: PaymentRow; gym: GymForReminder }) {
+function CardRow({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunction }) {
   return (
     <div className="px-4 py-3">
       <Link href={`/members/${p.memberId}`} className="block">
@@ -322,16 +319,16 @@ function CardRow({ p, gym }: { p: PaymentRow; gym: GymForReminder }) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-sm font-medium">{formatAZN(p.amount)}</span>
-            <StatusBadge eff={p.eff} />
+            <StatusBadge eff={p.eff} t={t} />
           </div>
         </div>
       </Link>
       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[var(--muted)]">
         <span>
-          {p.paidAt ? fmtDate(p.paidAt) : "Ödənilməyib"}
-          {p.method ? ` · ${PAY_METHOD[p.method]}` : ""}
+          {p.paidAt ? fmtDate(p.paidAt) : t("payments.notPaid")}
+          {p.method ? ` · ${t(`method.${p.method}`)}` : ""}
         </span>
-        <WhatsAppNudge p={p} gym={gym} />
+        <WhatsAppNudge p={p} gym={gym} t={t} />
       </div>
     </div>
   );

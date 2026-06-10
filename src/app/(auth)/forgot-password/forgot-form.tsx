@@ -2,10 +2,12 @@
 
 import { useActionState } from "react";
 import { requestPasswordReset, type FormState } from "@/lib/auth-actions";
+import { useT } from "@/components/i18n-provider";
 
 const initial: FormState = undefined;
 
 export function ForgotForm() {
+  const t = useT();
   const [state, action, pending] = useActionState(requestPasswordReset, initial);
 
   if (state?.message) {
@@ -34,7 +36,7 @@ export function ForgotForm() {
         )}
       </div>
       <button type="submit" disabled={pending} className="btn-brand w-full">
-        {pending ? "Göndərilir…" : "Sıfırlama linki göndər"}
+        {pending ? t("auth.forgotSending") : t("auth.forgotSubmit")}
       </button>
     </form>
   );

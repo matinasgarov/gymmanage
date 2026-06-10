@@ -3,21 +3,21 @@
 import { useActionState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { submitLead, type LeadFormState } from "@/lib/lead-actions";
-import { PLAN_TYPES, PLANS } from "@/config/gym-plans";
+import { PLAN_TYPES } from "@/config/gym-plans";
+import { useT } from "@/components/i18n-provider";
 
 const initial: LeadFormState = undefined;
 
 export function JoinForm({ gymId }: { gymId: string }) {
+  const t = useT();
   const [state, action, pending] = useActionState(submitLead, initial);
 
   if (state?.ok) {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-6 text-center">
         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-        <h2 className="font-semibold mb-1">Təşəkkürlər!</h2>
-        <p className="text-sm text-neutral-600">
-          Müraciətiniz alındı. Tezliklə sizinlə əlaqə saxlanılacaq.
-        </p>
+        <h2 className="font-semibold mb-1">{t("join.thanks")}</h2>
+        <p className="text-sm text-neutral-600">{t("join.successText")}</p>
       </div>
     );
   }
@@ -27,13 +27,13 @@ export function JoinForm({ gymId }: { gymId: string }) {
       <input type="hidden" name="gymId" value={gymId} />
 
       <Field
-        label="Adınız və soyadınız"
+        label={t("join.nameLabel")}
         name="name"
-        placeholder="Əli Məmmədov"
+        placeholder={t("join.namePlaceholder")}
         errors={state?.errors?.name}
       />
       <Field
-        label="Telefon"
+        label={t("join.phone")}
         name="phone"
         type="tel"
         placeholder="+994501234567"
@@ -42,7 +42,7 @@ export function JoinForm({ gymId }: { gymId: string }) {
 
       <div>
         <label htmlFor="interest" className="block text-sm font-medium mb-1">
-          Hansı plan maraqlandırır? (ixtiyari)
+          {t("join.interestLabel")}
         </label>
         <select
           id="interest"
@@ -50,10 +50,10 @@ export function JoinForm({ gymId }: { gymId: string }) {
           defaultValue=""
           className="w-full px-3 py-2 border rounded-md bg-white"
         >
-          <option value="">Hələ qərarsızam</option>
+          <option value="">{t("join.undecided")}</option>
           {PLAN_TYPES.map((p) => (
             <option key={p} value={p}>
-              {PLANS[p].label}
+              {t(`plan.${p}`)}
             </option>
           ))}
         </select>
@@ -61,13 +61,13 @@ export function JoinForm({ gymId }: { gymId: string }) {
 
       <div>
         <label htmlFor="message" className="block text-sm font-medium mb-1">
-          Qeyd (ixtiyari)
+          {t("join.noteLabel")}
         </label>
         <textarea
           id="message"
           name="message"
           rows={2}
-          placeholder="Sual və ya əlavə məlumat"
+          placeholder={t("join.notePlaceholder")}
           className="w-full px-3 py-2 border rounded-md"
         />
       </div>
@@ -77,7 +77,7 @@ export function JoinForm({ gymId }: { gymId: string }) {
       )}
 
       <button type="submit" disabled={pending} className="btn-brand w-full">
-        {pending ? "Göndərilir…" : "Müraciəti göndər"}
+        {pending ? t("join.sending") : t("join.submit")}
       </button>
     </form>
   );

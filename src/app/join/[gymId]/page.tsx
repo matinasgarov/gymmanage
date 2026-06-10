@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Dumbbell } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getT } from "@/lib/i18n-server";
 import { JoinForm } from "./join-form";
 
 export default async function JoinPage({
@@ -9,10 +10,13 @@ export default async function JoinPage({
   params: Promise<{ gymId: string }>;
 }) {
   const { gymId } = await params;
-  const gym = await prisma.gym.findUnique({
-    where: { id: gymId },
-    select: { id: true, name: true, logoUrl: true, phone: true, address: true },
-  });
+  const [t, gym] = await Promise.all([
+    getT(),
+    prisma.gym.findUnique({
+      where: { id: gymId },
+      select: { id: true, name: true, logoUrl: true, phone: true, address: true },
+    }),
+  ]);
   if (!gym) notFound();
 
   return (
@@ -28,9 +32,7 @@ export default async function JoinPage({
             )}
           </div>
           <h1 className="text-xl font-semibold mt-3">{gym.name}</h1>
-          <p className="text-sm text-neutral-600 mt-1">
-            Üzv olmaq istəyirsiniz? Aşağıdakı formanı doldurun, sizinlə əlaqə saxlayacağıq.
-          </p>
+          <p className="text-sm text-neutral-600 mt-1">{t("join.subtitle")}</p>
         </div>
 
         <JoinForm gymId={gym.id} />

@@ -1,8 +1,10 @@
 "use client";
 
 import type { HeatmapResult } from "@/lib/attendance";
+import { useT } from "@/components/i18n-provider";
 
 export function Heatmap({ data }: { data: HeatmapResult }) {
+  const t = useT();
   const { grid, max, dayLabels, dayLabelsFull } = data;
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
@@ -42,7 +44,7 @@ export function Heatmap({ data }: { data: HeatmapResult }) {
                   }}
                   title={
                     cell.count > 0
-                      ? `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — ${cell.count} giriş`
+                      ? `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — ${t("units.entries", { count: cell.count })}`
                       : `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — 0`
                   }
                 />
