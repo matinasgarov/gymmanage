@@ -5,7 +5,7 @@ import { planDurationDays } from "@/config/gym-plans";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 // Days after dueDate before a pending payment is considered overdue.
-const OVERDUE_GRACE_DAYS = 5;
+export const OVERDUE_GRACE_DAYS = 5;
 
 const MONTHS: Record<Locale, string[]> = {
   az: [
@@ -97,4 +97,46 @@ export function computeEffectiveStatus(
   cutoff.setUTCDate(cutoff.getUTCDate() + OVERDUE_GRACE_DAYS);
   if (new Date().getTime() > cutoff.getTime()) return "OVERDUE";
   return "PENDING";
+}
+
+// Single source of truth for "what does this member owe right now".
+// Consumed by the door (scan-actions), the pass page, /reminders, and the dashboard.
+export type DebtSummary = {
+  amount: number; // AZN — sum of all unpaid payments due so far
+  periodLabel: string; // label of the most recent unpaid period
+  graceDaysLeft: number; // 0 when effective is OVERDUE
+  effective: "PENDING" | "OVERDUE";
+};
+
+export function computeDebt(
+  payments: { status: string; dueDate: Date; paidAt: Date | null; amount: number }[],
+  plan: PlanType,
+  locale: Locale = DEFAULT_LOCALE,
+  now = new Date()
+): DebtSummary | null {
+  const graceEnd = (dueDate: Date) => {
+    const d = new Date(dueDate);
+    d.setUTCDate(d.getUTCDate() + OVERDUE_GRACE_DAYS);
+    return d;
+  };
+  const unpaid = payments.filter(
+    (p) =>
+      p.status !== "PAID" &&
+      p.paidAt === null &&
+      p.dueDate.getTime() <= now.getTime()
+  );
+  if (unpaid.length === 0) return null;
+
+  const latest = unpaid.reduce((a, b) => (a.dueDate > b.dueDate ? a : b));
+  const overdue = unpaid.some((p) => now.getTime() > graceEnd(p.dueDate).getTime());
+  const graceDaysLeft = Math.max(
+    0,
+    Math.ceil((graceEnd(latest.dueDate).getTime() - now.getTime()) / 86_400_000)
+  );
+  return {
+    amount: unpaid.reduce((s, p) => s + p.amount, 0),
+    periodLabel: formatPeriodLabel(latest.dueDate, plan, locale),
+    graceDaysLeft,
+    effective: overdue ? "OVERDUE" : "PENDING",
+  };
 }

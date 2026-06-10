@@ -3,13 +3,12 @@ import { forGym } from "@/lib/tenant";
 import { PLAN_LABEL } from "@/lib/labels";
 import { toCents, centsToNumber } from "@/lib/money";
 import { getAtRiskCounts } from "@/lib/retention";
+import { OVERDUE_GRACE_DAYS } from "@/lib/payments";
 
 const AZ_MONTHS_SHORT = [
   "Yan", "Fev", "Mar", "Apr", "May", "İyn",
   "İyl", "Avq", "Sen", "Okt", "Noy", "Dek",
 ];
-
-const OVERDUE_GRACE_DAYS = 5;
 
 function startOfDayUTC(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));

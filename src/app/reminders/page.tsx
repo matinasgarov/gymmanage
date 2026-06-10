@@ -4,8 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { getOwnerDb } from "@/lib/dal";
 import { getT } from "@/lib/i18n-server";
 import { ReminderQueue, type ReminderItem } from "@/components/reminder-queue";
-
-const OVERDUE_GRACE_DAYS = 5;
+import { OVERDUE_GRACE_DAYS } from "@/lib/payments";
 
 export default async function RemindersPage() {
   const { user, db } = await getOwnerDb();

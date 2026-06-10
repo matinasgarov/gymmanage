@@ -10,6 +10,8 @@ import {
   formatPeriodLabel,
   periodsThrough,
   computeEffectiveStatus,
+  computeDebt,
+  OVERDUE_GRACE_DAYS,
 } from "@/lib/payments";
 
 const MONTHLY = "MONTHLY_UNLIMITED" as PlanType;
@@ -90,5 +92,60 @@ describe("payments — periodsThrough", () => {
       new Date("2026-06-10T00:00:00Z")
     );
     expect(periods).toHaveLength(1);
+  });
+});
+
+describe("payments — computeDebt", () => {
+  const day = 24 * 60 * 60 * 1000;
+  const now = new Date("2026-05-10T12:00:00Z");
+  const pay = (daysAgo: number, amount = 50, paid = false) => ({
+    status: paid ? "PAID" : "PENDING",
+    dueDate: new Date(now.getTime() - daysAgo * day),
+    paidAt: paid ? new Date(now.getTime() - daysAgo * day) : null,
+    amount,
+  });
+
+  it("exports the 5-day grace constant", () => {
+    expect(OVERDUE_GRACE_DAYS).toBe(5);
+  });
+
+  it("returns null when nothing is unpaid", () => {
+    expect(computeDebt([], MONTHLY, "az", now)).toBeNull();
+    expect(computeDebt([pay(2, 50, true)], MONTHLY, "az", now)).toBeNull();
+  });
+
+  it("is PENDING with grace days left within the 5-day window", () => {
+    const d = computeDebt([pay(2)], MONTHLY, "az", now);
+    expect(d?.effective).toBe("PENDING");
+    expect(d?.graceDaysLeft).toBe(3);
+    expect(d?.amount).toBe(50);
+    expect(d?.periodLabel).toContain("2026");
+  });
+
+  it("is OVERDUE with zero grace once past the window", () => {
+    const d = computeDebt([pay(6)], MONTHLY, "az", now);
+    expect(d?.effective).toBe("OVERDUE");
+    expect(d?.graceDaysLeft).toBe(0);
+  });
+
+  it("boundary: day 5 is still PENDING, day 6 is OVERDUE", () => {
+    expect(computeDebt([pay(5)], MONTHLY, "az", now)?.effective).toBe("PENDING");
+    expect(computeDebt([pay(6)], MONTHLY, "az", now)?.effective).toBe("OVERDUE");
+  });
+
+  it("sums multiple unpaid periods; any overdue period makes the whole debt OVERDUE", () => {
+    const d = computeDebt([pay(40), pay(2)], MONTHLY, "az", now);
+    expect(d?.amount).toBe(100);
+    expect(d?.effective).toBe("OVERDUE");
+  });
+
+  it("ignores future-dated payments", () => {
+    const future = {
+      status: "PENDING",
+      dueDate: new Date(now.getTime() + 5 * day),
+      paidAt: null,
+      amount: 50,
+    };
+    expect(computeDebt([future], MONTHLY, "az", now)).toBeNull();
   });
 });
