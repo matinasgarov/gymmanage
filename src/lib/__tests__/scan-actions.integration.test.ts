@@ -225,4 +225,28 @@ describe("scan-actions — grace entry with debt", () => {
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.debt).toBeUndefined();
   });
+
+  it("returns a Russian-locale periodLabel for a ru-locale gym", async () => {
+    const gym = await seedGym({ locale: "ru" });
+    const owner = await seedOwner(gym.id);
+    // startDate 2 days ago → current period due 2 days ago: unpaid, within 5-day grace.
+    const dueDate = new Date(Date.now() - 2 * DAY);
+    const member = await seedMember(gym.id, { startDate: dueDate });
+    await login(owner);
+    const { token } = signScanToken(member.id, member.qrSecret);
+
+    const res = await verifyScan(token);
+
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.debt).toBeTruthy();
+      // Russian month name for the due month + year
+      const MONTHS_RU = [
+        "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+      ];
+      const expectedLabel = `${MONTHS_RU[dueDate.getUTCMonth()]} ${dueDate.getUTCFullYear()}`;
+      expect(res.debt?.periodLabel).toBe(expectedLabel);
+    }
+  });
 });

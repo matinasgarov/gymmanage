@@ -5,7 +5,7 @@ import type { GymDb } from "@/lib/tenant";
 import type { PlanType } from "@/generated/prisma/enums";
 import { parseScanToken, verifyScanToken } from "@/lib/qr";
 import { ensurePendingPayments, computeDebt, periodsThrough, type DebtSummary } from "@/lib/payments";
-import { DEFAULT_LOCALE } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n";
 import { verifyVisitorPassScan } from "@/lib/visitor-actions";
 
 export type ScanResult =
@@ -76,7 +76,8 @@ async function monthlyCapReached(
 // this aggregates ALL unpaid periods and denies if any is past grace.
 async function assessPaymentDebt(
   db: GymDb,
-  member: { id: string; planType: PlanType }
+  member: { id: string; planType: PlanType },
+  gymLocale: string = DEFAULT_LOCALE
 ): Promise<DebtSummary | null> {
   await ensurePendingPayments(member.id);
   const now = new Date();
@@ -89,10 +90,11 @@ async function assessPaymentDebt(
     },
     select: { status: true, dueDate: true, paidAt: true, amount: true },
   });
+  const locale = isLocale(gymLocale) ? gymLocale : DEFAULT_LOCALE;
   return computeDebt(
     rows.map((r) => ({ ...r, amount: Number(r.amount.toString()) })),
     member.planType,
-    DEFAULT_LOCALE,
+    locale,
     now
   );
 }
@@ -183,6 +185,7 @@ export async function verifyScan(raw: string): Promise<ScanResult> {
       startDate: true,
       planType: true,
       monthlyEntryLimit: true,
+      gym: { select: { locale: true } },
     },
   });
   if (!member) {
@@ -222,7 +225,7 @@ export async function verifyScan(raw: string): Promise<ScanResult> {
   }
 
   // Payment check for the current period
-  const debt = await assessPaymentDebt(db, member);
+  const debt = await assessPaymentDebt(db, member, member.gym?.locale ?? DEFAULT_LOCALE);
   if (debt && debt.effective === "OVERDUE") {
     await db.checkIn.create({
       data: {
@@ -388,6 +391,7 @@ export async function grantManualEntry(memberId: string): Promise<ScanResult> {
       startDate: true,
       planType: true,
       monthlyEntryLimit: true,
+      gym: { select: { locale: true } },
     },
   });
   if (!member) return { ok: false, reason: REASON.not_found };
@@ -421,7 +425,7 @@ export async function grantManualEntry(memberId: string): Promise<ScanResult> {
     };
   }
 
-  const debt = await assessPaymentDebt(db, member);
+  const debt = await assessPaymentDebt(db, member, member.gym?.locale ?? DEFAULT_LOCALE);
   if (debt && debt.effective === "OVERDUE") {
     await db.checkIn.create({
       data: {

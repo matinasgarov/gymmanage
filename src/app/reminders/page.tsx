@@ -36,7 +36,7 @@ export default async function RemindersPage() {
   const paymentItems: ReminderItem[] = withMember.map((p) => {
     const daysLate = Math.floor((today.getTime() - p.dueDate.getTime()) / 86_400_000);
     return {
-      group: daysLate > OVERDUE_GRACE_DAYS ? ("overdue" as const) : ("dueNow" as const),
+      group: daysLate >= OVERDUE_GRACE_DAYS ? ("overdue" as const) : ("dueNow" as const),
       paymentId: p.id,
       period: p.period,
       amount: Number(p.amount.toString()),
