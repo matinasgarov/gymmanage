@@ -5,6 +5,7 @@ import { getOwnerDb } from "@/lib/dal";
 import { getT } from "@/lib/i18n-server";
 import { ReminderQueue, type ReminderItem } from "@/components/reminder-queue";
 import { OVERDUE_GRACE_DAYS } from "@/lib/payments";
+import { centsToNumber, sumCents } from "@/lib/money";
 
 export default async function RemindersPage() {
   const { user, db } = await getOwnerDb();
@@ -69,7 +70,7 @@ export default async function RemindersPage() {
     ...expiringItems,
   ];
   const summary = {
-    amount: paymentItems.reduce((s, i) => s + (i.amount ?? 0), 0),
+    amount: centsToNumber(sumCents(paymentItems.map((i) => i.amount))),
     people: new Set(paymentItems.map((i) => i.member.id)).size,
   };
 
