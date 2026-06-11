@@ -49,8 +49,21 @@ export default async function DashboardPage() {
 
       <div className="px-4 lg:px-8 py-6 space-y-6">
         {/* TIER 1 — alerts. Slim pills, only when something needs attention. */}
-        {(data.newLeadsCount > 0 || atRiskCount > 0) && (
+        {(data.newLeadsCount > 0 || atRiskCount > 0 || data.collect.people > 0) && (
           <div className="flex flex-wrap gap-2">
+            {data.collect.people > 0 && (
+              <Link
+                href="/reminders"
+                className="inline-flex items-center gap-2 rounded-full bg-amber-50 text-amber-700 px-3.5 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {t("dashboard.collectPill", {
+                  amount: data.collect.amount.toFixed(2),
+                  people: data.collect.people,
+                })}
+                <span aria-hidden>→</span>
+              </Link>
+            )}
             {data.newLeadsCount > 0 && (
               <Link
                 href="/leads?status=NEW"

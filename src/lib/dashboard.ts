@@ -142,6 +142,24 @@ export async function getDashboard(gymId: string) {
     if (v.createdAt >= monthStart) visitorRevenueCents += toCents(v.amount);
   }
 
+  // Money the owner should collect right now: every unpaid payment already due
+  // (both within-grace and overdue) for non-cancelled/frozen members.
+  const collectRows = await db.payment.findMany({
+    where: {
+      status: { not: "PAID" },
+      paidAt: null,
+      dueDate: { lte: now },
+      member: { status: { notIn: ["CANCELLED", "FROZEN"] } },
+    },
+    select: { amount: true, memberId: true },
+  });
+  let collectCents = 0;
+  const collectMemberIds = new Set<string>();
+  for (const r of collectRows) {
+    collectCents += toCents(r.amount);
+    if (r.memberId) collectMemberIds.add(r.memberId);
+  }
+
   const [newLeadsCount, atRisk, gymRow] = await Promise.all([
     db.lead.count({ where: { status: "NEW" } }),
     getAtRiskCounts(gymId),
@@ -220,6 +238,10 @@ export async function getDashboard(gymId: string) {
     activeAtMonthStart,
     newLeadsCount,
     atRisk,
+    collect: {
+      amount: centsToNumber(collectCents),
+      people: collectMemberIds.size,
+    },
   };
 }
 

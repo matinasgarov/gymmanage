@@ -30,6 +30,7 @@
       "many": "{count} участников в зоне риска",
       "other": "{count} участника в зоне риска"
     },
+    "collectPill": "Собрать {amount}₼ с {people} чел.",
     "todayCheckins": "Вход сегодня",
     "live": "вживую",
     "noCheckinsYet": "Входов ещё нет",
