@@ -82,7 +82,7 @@ export default async function RemindersPage() {
         icon={Megaphone}
         tone="dark"
       />
-      <div className="px-4 lg:px-8 py-6">
+      <div className="dash min-h-full px-4 lg:px-7 py-6">
         <ReminderQueue
           items={items}
           gymName={user.gym.name}

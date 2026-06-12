@@ -6,11 +6,11 @@ import { getOwnerDb } from "@/lib/dal";
 import { getT } from "@/lib/i18n-server";
 import { LeadRowActions } from "@/components/lead-row-actions";
 
-const STATUS_COLOR: Record<string, string> = {
-  NEW: "bg-amber-100 text-amber-700",
-  CONTACTED: "bg-sky-100 text-sky-700",
-  CONVERTED: "bg-emerald-100 text-emerald-700",
-  LOST: "bg-slate-200 text-slate-700",
+const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
+  NEW: { bg: "rgba(245,158,11,.12)", color: "#f59e0b" },
+  CONTACTED: { bg: "rgba(6,182,212,.15)", color: "#06b6d4" },
+  CONVERTED: { bg: "rgba(16,185,129,.12)", color: "#10b981" },
+  LOST: { bg: "var(--d-bg)", color: "var(--d-tx3)" },
 };
 
 function fmtDateTime(d: Date) {
@@ -63,8 +63,8 @@ export default async function LeadsPage({
                 href={tab.value ? `/leads?status=${tab.value}` : "/leads"}
                 className={`px-4 py-2.5 border-b-2 -mb-px shrink-0 transition-colors ${
                   active === tab.value
-                    ? "border-[var(--brand)] text-white"
-                    : "border-transparent text-white/60 hover:text-white"
+                    ? "border-white text-white font-semibold"
+                    : "border-transparent text-white/55 hover:text-white"
                 }`}
               >
                 {t(tab.labelKey)}
@@ -74,72 +74,77 @@ export default async function LeadsPage({
         }
       />
 
-      <div className="px-4 lg:px-8 py-6 space-y-4">
-        <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium">{t("leads.registerLink")}</div>
-            <div className="text-xs text-[var(--muted)] mt-0.5">{t("leads.shareHint")}</div>
-            <code className="block text-xs text-[var(--brand-strong)] mt-1 break-all">
+      <div className="dash min-h-full px-4 lg:px-7 py-6" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {/* Public registration link card */}
+        <div
+          style={{ background: "white", borderRadius: 16, boxShadow: "var(--d-sh1)", padding: "16px 20px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--d-tx)" }}>{t("leads.registerLink")}</div>
+            <div style={{ fontSize: 11.5, color: "var(--d-tx3)", fontWeight: 500, marginTop: 2 }}>{t("leads.shareHint")}</div>
+            <code style={{ display: "block", fontSize: 12, color: "#3b7bf6", marginTop: 4, wordBreak: "break-all" }}>
               {publicUrl}
             </code>
           </div>
-          <Link
-            href={publicUrl}
-            target="_blank"
-            className="btn-ghost inline-flex items-center gap-1.5 shrink-0"
-          >
-            <ExternalLink className="w-3.5 h-3.5" /> {t("leads.openLink")}
+          <Link href={publicUrl} target="_blank" className="dash-scan-btn">
+            <ExternalLink style={{ width: 14, height: 14 }} /> {t("leads.openLink")}
           </Link>
         </div>
 
         {leads.length === 0 ? (
-          <div className="card p-10 text-center">
-            <Inbox className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--muted)]">
+          <div style={{ background: "white", borderRadius: 16, boxShadow: "var(--d-sh1)", padding: "48px 20px", textAlign: "center" }}>
+            <Inbox style={{ width: 32, height: 32, color: "var(--d-tx3)", margin: "0 auto 10px" }} />
+            <p style={{ fontSize: 13, color: "var(--d-tx3)", fontWeight: 600 }}>
               {active ? t("leads.noLeadsFiltered") : t("leads.noLeads")}
             </p>
           </div>
         ) : (
-          <div className="card divide-y divide-[var(--border)]">
-            {leads.map((l) => (
-              <div
-                key={l.id}
-                className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm">{l.name}</span>
-                    <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_COLOR[l.status]}`}
-                    >
-                      {t(`leadStatus.${l.status}`)}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-[var(--muted)] mt-0.5">
-                    <a
-                      href={`tel:${l.phone}`}
-                      className="inline-flex items-center gap-1 hover:underline"
-                    >
-                      <PhoneCall className="w-3 h-3" />
-                      {l.phone}
-                    </a>
-                    {l.interest && <> · {t(`plan.${l.interest}`)}</>}
-                    {" · "}
-                    {fmtDateTime(l.createdAt)}
-                  </div>
-                  {l.message && (
-                    <div className="text-xs text-[var(--muted)] mt-1.5 italic">
-                      &ldquo;{l.message}&rdquo;
+          <div style={{ background: "white", borderRadius: 16, boxShadow: "var(--d-sh1)", overflow: "hidden", padding: "6px 20px" }}>
+            {leads.map((l, i) => {
+              const badge = STATUS_BADGE[l.status];
+              return (
+                <div
+                  key={l.id}
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "14px 0",
+                    borderBottom: i < leads.length - 1 ? "1px solid var(--d-bdr)" : "none",
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--d-tx)" }}>{l.name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 6, background: badge.bg, color: badge.color }}>
+                        {t(`leadStatus.${l.status}`)}
+                      </span>
                     </div>
-                  )}
+                    <div style={{ fontSize: 11.5, color: "var(--d-tx3)", fontWeight: 500, marginTop: 3 }}>
+                      <a href={`tel:${l.phone}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--d-tx3)", textDecoration: "none" }}>
+                        <PhoneCall style={{ width: 12, height: 12 }} />
+                        {l.phone}
+                      </a>
+                      {l.interest && <> · {t(`plan.${l.interest}`)}</>}
+                      {" · "}
+                      {fmtDateTime(l.createdAt)}
+                    </div>
+                    {l.message && (
+                      <div style={{ fontSize: 12, color: "var(--d-tx2)", marginTop: 6, fontStyle: "italic" }}>
+                        &ldquo;{l.message}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                  <LeadRowActions
+                    leadId={l.id}
+                    status={l.status}
+                    convertedMemberId={l.convertedMemberId}
+                  />
                 </div>
-                <LeadRowActions
-                  leadId={l.id}
-                  status={l.status}
-                  convertedMemberId={l.convertedMemberId}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

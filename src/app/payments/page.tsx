@@ -7,7 +7,6 @@ import { getT } from "@/lib/i18n-server";
 import type { TFunction } from "@/lib/i18n";
 import { formatAZN } from "@/lib/members";
 import { waReminderUrl } from "@/lib/dashboard";
-import { PAYMENT_STATUS_COLOR as STATUS_COLOR } from "@/lib/labels";
 import {
   getPaymentsList,
   type PaymentsListResult,
@@ -15,7 +14,7 @@ import {
   type PaymentSort,
   type PaymentStatusFilter,
 } from "@/lib/payments-list";
-import { Chip, Pagination } from "@/components/list-controls";
+import { Pagination } from "@/components/list-controls";
 import { UrlSelect } from "@/components/url-select";
 
 const STATUS_CHIPS: { value: PaymentStatusFilter; labelKey: string }[] = [
@@ -24,6 +23,10 @@ const STATUS_CHIPS: { value: PaymentStatusFilter; labelKey: string }[] = [
   { value: "unpaid", labelKey: "payments.filterUnpaid" },
   { value: "overdue", labelKey: "paymentStatus.OVERDUE" },
 ];
+
+// Spec-aligned filter dropdown styling (bg --d-bg, border --d-bdr, blue hover).
+const SELECT_CLASS =
+  "rounded-[9px] border border-[var(--d-bdr)] bg-[var(--d-bg)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--d-tx2)] outline-none cursor-pointer hover:border-[#3b7bf6] transition-colors";
 
 function naturalDir(sort: PaymentSort): "asc" | "desc" {
   return sort === "date" ? "desc" : "asc";
@@ -102,93 +105,149 @@ export default async function PaymentsPage({
 
   return (
     <AppShell>
-      <PageHeader title={t("nav.payments")} subtitle={user.gym.name} icon={Receipt} tone="dark" />
+      <PageHeader
+        title={t("nav.payments")}
+        subtitle={user.gym.name}
+        icon={Receipt}
+        tone="dark"
+        actions={
+          <a
+            href={exportHref(r)}
+            download
+            className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-white/20"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("payments.exportCsv")}</span>
+          </a>
+        }
+      />
 
-      <div className="px-4 lg:px-8 py-6 space-y-4">
-        {/* Summary cards — recompute with the active filter. */}
-        <section className="grid grid-cols-3 gap-3">
-          <SummaryCard label={t("payments.collected")} value={formatAZN(r.summary.collected)} />
-          <SummaryCard label={t("payments.paidCount")} value={String(r.summary.paidCount)} />
-          <SummaryCard label={t("payments.payingMembers")} value={String(r.summary.payingMembers)} />
-        </section>
-
-        {/* Toolbar */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <form className="card flex items-center gap-2 px-3 py-2 flex-1">
-              <Search className="w-4 h-4 text-[var(--muted)] shrink-0" />
-              <input
-                name="q"
-                defaultValue={r.q}
-                placeholder={t("payments.searchPlaceholder")}
-                className="flex-1 outline-none text-sm bg-transparent"
-              />
-              {r.status !== "all" && <input type="hidden" name="status" value={r.status} />}
-              {r.method && <input type="hidden" name="method" value={r.method} />}
-              {r.range !== "all" && <input type="hidden" name="range" value={r.range} />}
-              {r.sort !== "date" && <input type="hidden" name="sort" value={r.sort} />}
-              <button type="submit" className="text-xs text-[var(--brand-strong)] font-medium px-2">
-                {t("common.search")}
-              </button>
-            </form>
-            <a
-              href={exportHref(r)}
-              className="btn-ghost inline-flex items-center gap-1.5 shrink-0"
-              download
+      <div className="dash min-h-full px-6 py-6 space-y-[18px]">
+        {/* Hero stats — featured "collected" + two count cards. */}
+        <section className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-4">
+          <div
+            className="relative overflow-hidden rounded-2xl px-7 py-6 text-white"
+            style={{
+              background: "#0f2044",
+              boxShadow: "0 4px 24px rgba(11,22,40,.1), 0 1px 4px rgba(11,22,40,.05)",
+            }}
+          >
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                top: -50, right: -50, width: 180, height: 180,
+                borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(59,123,246,.18) 0%, transparent 70%)",
+              }}
+            />
+            <span
+              className="block text-[10.5px] font-bold uppercase tracking-[1px]"
+              style={{ color: "rgba(255,255,255,.38)" }}
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("payments.exportCsv")}</span>
-            </a>
+              {t("payments.collected")}
+            </span>
+            <div className="mt-1.5 text-[42px] font-extrabold leading-none tracking-[-2px] text-white">
+              {formatAZN(r.summary.collected)}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {STATUS_CHIPS.map((c) => (
-              <Chip
-                key={c.value}
-                href={buildHref(r, { status: c.value === "all" ? null : c.value, page: null })}
-                active={r.status === c.value}
-                label={t(c.labelKey)}
-              />
-            ))}
-            <div className="ml-auto flex items-center gap-1.5">
+          <StatCard label={t("payments.paidCount")} value={String(r.summary.paidCount)} />
+          <StatCard label={t("payments.payingMembers")} value={String(r.summary.payingMembers)} />
+        </section>
+
+        {/* Filters — search row + tabs row, all URL-driven. */}
+        <div
+          className="overflow-hidden rounded-2xl bg-white"
+          style={{ boxShadow: "var(--d-sh1)" }}
+        >
+          <form
+            className="flex items-center gap-2.5 px-[18px] py-3.5"
+            style={{ borderBottom: "1px solid var(--d-bdr)" }}
+          >
+            <Search className="w-[15px] h-[15px] shrink-0" style={{ color: "var(--d-tx3)" }} />
+            <input
+              name="q"
+              defaultValue={r.q}
+              placeholder={t("payments.searchPlaceholder")}
+              className="flex-1 bg-transparent text-[13.5px] font-medium outline-none"
+              style={{ color: "var(--d-tx)" }}
+            />
+            {r.status !== "all" && <input type="hidden" name="status" value={r.status} />}
+            {r.method && <input type="hidden" name="method" value={r.method} />}
+            {r.range !== "all" && <input type="hidden" name="range" value={r.range} />}
+            {r.sort !== "date" && <input type="hidden" name="sort" value={r.sort} />}
+            <button
+              type="submit"
+              className="shrink-0 px-1 text-[12.5px] font-bold text-[#3b7bf6] hover:text-[#2d6ef0]"
+            >
+              {t("common.search")}
+            </button>
+          </form>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 px-[18px] py-2.5">
+            <div className="flex flex-wrap gap-1">
+              {STATUS_CHIPS.map((c) => (
+                <Tab
+                  key={c.value}
+                  href={buildHref(r, { status: c.value === "all" ? null : c.value, page: null })}
+                  active={r.status === c.value}
+                  label={t(c.labelKey)}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
               <UrlSelect
                 param="method"
                 value={r.method ?? ""}
                 options={METHOD_OPTIONS}
                 ariaLabel={t("payments.methodFilter")}
+                className={SELECT_CLASS}
               />
               <UrlSelect
                 param="range"
                 value={r.range === "all" ? "" : r.range}
                 options={RANGE_OPTIONS}
                 ariaLabel={t("payments.rangeFilter")}
+                className={SELECT_CLASS}
               />
             </div>
           </div>
         </div>
 
         {r.rows.length === 0 ? (
-          <div className="card p-10 text-center">
-            <Receipt className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--muted)]">{t("members.noResults")}</p>
+          <div
+            className="rounded-2xl bg-white p-10 text-center"
+            style={{ boxShadow: "var(--d-sh1)" }}
+          >
+            <Receipt className="mx-auto mb-2 h-8 w-8" style={{ color: "var(--d-tx3)" }} />
+            <p className="text-sm" style={{ color: "var(--d-tx3)" }}>
+              {t("members.noResults")}
+            </p>
           </div>
         ) : (
           <>
             {/* Desktop table */}
-            <div className="card hidden lg:block overflow-hidden">
-              <table className="w-full text-sm">
+            <div
+              className="hidden overflow-x-auto rounded-2xl bg-white lg:block"
+              style={{ boxShadow: "var(--d-sh1)" }}
+            >
+              <table className="w-full min-w-[800px] border-collapse">
                 <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--muted)]">
+                  <tr>
                     <SortHeader r={r} col="name" label={t("members.colMember")} />
-                    <th className="px-4 py-2.5 font-medium">{t("payments.colPeriod")}</th>
+                    <Th label={t("payments.colPeriod")} />
                     <SortHeader r={r} col="date" label={t("payments.colDate")} />
-                    <th className="px-4 py-2.5 font-medium">{t("payments.colMethod")}</th>
+                    <Th label={t("payments.colMethod")} />
                     <SortHeader r={r} col="amount" label={t("payments.colAmount")} />
-                    <th className="px-4 py-2.5 font-medium">{t("members.colStatus")}</th>
-                    <th className="px-4 py-2.5 font-medium w-16" aria-label={t("members.actions")} />
+                    <Th label={t("members.colStatus")} />
+                    <th
+                      className="px-5 py-3"
+                      style={{ borderBottom: "1px solid var(--d-bdr)" }}
+                      aria-label={t("members.actions")}
+                    />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--border)]">
+                <tbody>
                   {r.rows.map((p) => (
                     <TableRow key={p.id} p={p} gym={user.gym} t={t} />
                   ))}
@@ -197,7 +256,10 @@ export default async function PaymentsPage({
             </div>
 
             {/* Mobile cards */}
-            <div className="card divide-y divide-[var(--border)] lg:hidden">
+            <div
+              className="overflow-hidden rounded-2xl bg-white lg:hidden"
+              style={{ boxShadow: "var(--d-sh1)" }}
+            >
               {r.rows.map((p) => (
                 <CardRow key={p.id} p={p} gym={user.gym} t={t} />
               ))}
@@ -217,12 +279,48 @@ export default async function PaymentsPage({
 
 type GymForReminder = Parameters<typeof waReminderUrl>[0];
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="card p-3.5">
-      <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
-      <div className="mt-1 text-xl font-semibold">{value}</div>
+    <div className="rounded-2xl bg-white px-6 py-5" style={{ boxShadow: "var(--d-sh1)" }}>
+      <span
+        className="block text-[10.5px] font-bold uppercase tracking-[1px]"
+        style={{ color: "var(--d-tx3)" }}
+      >
+        {label}
+      </span>
+      <div
+        className="mt-1.5 text-[40px] font-extrabold leading-none tracking-[-2px]"
+        style={{ color: "var(--d-tx)" }}
+      >
+        {value}
+      </div>
     </div>
+  );
+}
+
+function Tab({ href, active, label }: { href: string; active: boolean; label: string }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-lg px-3.5 py-[5px] text-[12.5px] font-bold transition-colors ${
+        active
+          ? "bg-[#3b7bf6] text-white shadow-[0_2px_8px_rgba(59,123,246,.3)]"
+          : "text-[var(--d-tx3)] hover:bg-[var(--d-accent-lt)] hover:text-[#3b7bf6]"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function Th({ label }: { label: string }) {
+  return (
+    <th
+      className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.9px] whitespace-nowrap"
+      style={{ color: "var(--d-tx3)", borderBottom: "1px solid var(--d-bdr)" }}
+    >
+      {label}
+    </th>
   );
 }
 
@@ -239,26 +337,43 @@ function SortHeader({
   const nextDir = active ? (r.dir === "asc" ? "desc" : "asc") : naturalDir(col);
   const href = buildHref(r, { sort: col, dir: nextDir, page: null });
   return (
-    <th className="px-4 py-2.5 font-medium">
-      <Link href={href} className="inline-flex items-center gap-1 hover:text-[var(--foreground)]">
+    <th
+      className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.9px] whitespace-nowrap"
+      style={{ color: "var(--d-tx3)", borderBottom: "1px solid var(--d-bdr)" }}
+    >
+      <Link href={href} className="inline-flex items-center gap-1 hover:text-[#3b7bf6]">
         {label}
         {active &&
-          (r.dir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+          (r.dir === "asc" ? (
+            <ArrowUp className="w-3 h-3 text-[#3b7bf6]" />
+          ) : (
+            <ArrowDown className="w-3 h-3 text-[#3b7bf6]" />
+          ))}
       </Link>
     </th>
   );
 }
 
+// Map effective payment status to the spec's badge palette.
+function statusStyle(eff: string): { background: string; color: string } {
+  if (eff === "PAID") return { background: "var(--d-green-lt)", color: "var(--d-green)" };
+  if (eff === "OVERDUE") return { background: "var(--d-red-lt)", color: "var(--d-red)" };
+  return { background: "var(--d-warn-lt)", color: "var(--d-warn)" };
+}
+
 function StatusBadge({ eff, t }: { eff: string; t: TFunction }) {
   return (
-    <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_COLOR[eff]}`}>
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-[11.5px] font-bold whitespace-nowrap"
+      style={statusStyle(eff)}
+    >
       {t(`paymentStatus.${eff}`)}
     </span>
   );
 }
 
 function WhatsAppNudge({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunction }) {
-  if (p.eff === "PAID" || !p.phone) return <span className="text-[var(--muted)]">—</span>;
+  if (p.eff === "PAID" || !p.phone) return <span style={{ color: "var(--d-tx3)" }}>—</span>;
   const url = waReminderUrl(
     gym,
     { name: p.memberName, phone: p.phone },
@@ -266,13 +381,11 @@ function WhatsAppNudge({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: T
     formatAZN(p.amount)
   );
   return (
-    // No onClick: this server component cannot pass event handlers, and the
-    // anchor is not nested inside the row Link, so no propagation stop is needed.
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-3 py-1 shrink-0"
+      className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-emerald-600"
     >
       {t("common.whatsapp")}
     </a>
@@ -284,22 +397,44 @@ function fmtDate(d: Date) {
 }
 
 function TableRow({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunction }) {
+  const big = p.amount >= 1000;
   return (
-    <tr className="hover:bg-[var(--background)] transition-colors">
-      <td className="px-4 py-3">
+    <tr
+      className="transition-colors hover:bg-[var(--d-accent-lt)]"
+      style={{ borderBottom: "1px solid var(--d-bdr)" }}
+    >
+      <td className="px-5 py-3.5">
         <Link href={`/members/${p.memberId}`} className="block min-w-0">
-          <div className="font-medium truncate">{p.memberName}</div>
-          <div className="text-[11px] text-[var(--muted)]">{p.publicId}</div>
+          <div className="text-[13.5px] font-bold truncate" style={{ color: "var(--d-tx)" }}>
+            {p.memberName}
+          </div>
+          <div className="text-[11.5px] font-medium" style={{ color: "var(--d-tx3)" }}>
+            {p.publicId}
+          </div>
         </Link>
       </td>
-      <td className="px-4 py-3 text-[var(--muted)]">{p.periodLabel}</td>
-      <td className="px-4 py-3 text-[var(--muted)]">{p.paidAt ? fmtDate(p.paidAt) : "—"}</td>
-      <td className="px-4 py-3 text-[var(--muted)]">{p.method ? t(`method.${p.method}`) : "—"}</td>
-      <td className="px-4 py-3 font-medium">{formatAZN(p.amount)}</td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3.5 text-[13px] font-medium" style={{ color: "var(--d-tx2)" }}>
+        {p.periodLabel}
+      </td>
+      <td
+        className="px-4 py-3.5 text-[13px] font-semibold tabular-nums"
+        style={{ color: "var(--d-tx)" }}
+      >
+        {p.paidAt ? fmtDate(p.paidAt) : "—"}
+      </td>
+      <td className="px-4 py-3.5 text-[13px] font-semibold" style={{ color: "var(--d-tx2)" }}>
+        {p.method ? t(`method.${p.method}`) : "—"}
+      </td>
+      <td
+        className="px-4 py-3.5 text-[15px] font-extrabold tracking-[-0.4px] tabular-nums"
+        style={{ color: big ? "#3b7bf6" : "var(--d-tx)" }}
+      >
+        {formatAZN(p.amount)}
+      </td>
+      <td className="px-4 py-3.5">
         <StatusBadge eff={p.eff} t={t} />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-5 py-3.5 text-right">
         <WhatsAppNudge p={p} gym={gym} t={t} />
       </td>
     </tr>
@@ -307,24 +442,32 @@ function TableRow({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunct
 }
 
 function CardRow({ p, gym, t }: { p: PaymentRow; gym: GymForReminder; t: TFunction }) {
+  const big = p.amount >= 1000;
   return (
-    <div className="px-4 py-3">
+    <div className="px-4 py-3.5" style={{ borderBottom: "1px solid var(--d-bdr)" }}>
       <Link href={`/members/${p.memberId}`} className="block">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="font-medium text-sm truncate">{p.memberName}</div>
-            <div className="text-[11px] text-[var(--muted)]">
+            <div className="text-[13.5px] font-bold truncate" style={{ color: "var(--d-tx)" }}>
+              {p.memberName}
+            </div>
+            <div className="text-[11.5px] font-medium" style={{ color: "var(--d-tx3)" }}>
               {p.publicId} · {p.periodLabel}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm font-medium">{formatAZN(p.amount)}</span>
+            <span
+              className="text-[15px] font-extrabold tracking-[-0.4px] tabular-nums"
+              style={{ color: big ? "#3b7bf6" : "var(--d-tx)" }}
+            >
+              {formatAZN(p.amount)}
+            </span>
             <StatusBadge eff={p.eff} t={t} />
           </div>
         </div>
       </Link>
-      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[var(--muted)]">
-        <span>
+      <div className="mt-2 flex items-center justify-between gap-2 text-[11.5px]">
+        <span style={{ color: "var(--d-tx3)" }}>
           {p.paidAt ? fmtDate(p.paidAt) : t("payments.notPaid")}
           {p.method ? ` · ${t(`method.${p.method}`)}` : ""}
         </span>

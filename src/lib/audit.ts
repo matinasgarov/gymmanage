@@ -19,6 +19,19 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
 
 export type AuditPayload = Record<string, unknown> | null;
 
+export type AuditCategory = "payment" | "member" | "scannerdevice" | "gym" | "guest";
+
+// Buckets every real audit action into one of the five display categories used
+// by the audit log UI (badge colour, icon, and filter tab). Check-ins ride the
+// "scannerdevice" bucket since both surface under the "Girişlər" tab.
+export function auditCategory(action: string): AuditCategory {
+  if (action.startsWith("payment.")) return "payment";
+  if (action.startsWith("member.") || action.startsWith("pass.")) return "member";
+  if (action.startsWith("device.") || action.startsWith("checkin.")) return "scannerdevice";
+  if (action.startsWith("visitor.")) return "guest";
+  return "gym"; // gym.*, staff.*, reminder.*, and any future system events
+}
+
 export function summarizeAudit(payload: AuditPayload): string {
   if (!payload || typeof payload !== "object") return "";
   const parts: string[] = [];

@@ -10,11 +10,13 @@ export function UrlSelect({
   value,
   options,
   ariaLabel,
+  className,
 }: {
   param: string;
   value: string;
   options: { value: string; label: string }[];
   ariaLabel: string;
+  className?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -35,7 +37,10 @@ export function UrlSelect({
       aria-label={ariaLabel}
       value={value}
       onChange={onChange}
-      className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-medium text-[var(--foreground)] outline-none focus:ring-2 focus:ring-black/10"
+      className={
+        className ??
+        "rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-medium text-[var(--foreground)] outline-none focus:ring-2 focus:ring-black/10"
+      }
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>

@@ -17,8 +17,8 @@ export default async function ScanPage() {
         icon={ScanLine}
         tone="dark"
       />
-      <div className="px-4 lg:px-8 py-6">
-        <div className="max-w-md mx-auto">
+      <div className="dash min-h-full px-4 lg:px-7 py-7 flex justify-center">
+        <div className="w-full" style={{ maxWidth: 420 }}>
           <Scanner canOverride={user.role === "OWNER"} />
           {user.role === "OWNER" && <VisitorPassActions />}
         </div>

@@ -52,10 +52,6 @@ function endOfDayUtc(now = new Date()): Date {
   ));
 }
 
-function originFromHeaders(host: string | null, proto: string | null): string {
-  return `${proto ?? "http"}://${host ?? "localhost:3000"}`;
-}
-
 export async function recordQuickVisit(
   _prev: VisitorFormState,
   formData: FormData

@@ -3,30 +3,31 @@
 import { useState, useTransition } from "react";
 import { Target, X, Pencil } from "lucide-react";
 import { setMonthlyGoal, type SettingsState } from "@/lib/settings-actions";
-import { useT, useLocale } from "@/components/i18n-provider";
+import { useT } from "@/components/i18n-provider";
 
 export function MonthlyGoalProgress({
   goal,
   current,
   variant = "compact",
+  dark = false,
 }: {
   goal: number | null;
   current: number;
   variant?: "compact" | "hero";
+  dark?: boolean;
 }) {
   const t = useT();
-  const locale = useLocale();
+  // Pin to "en-US" so SSR (Node ICU) and the browser produce identical output.
+  // A dynamic locale like "az" isn't in Node's default ICU, causing a grouping-
+  // separator hydration mismatch (50,660 on the server vs 50.660 in the browser).
   const fmtAzn = (n: number) =>
-    n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  // Hero figures drop the cents — on a monthly headline, decimals are noise.
-  const fmtAznHero = (n: number) => Math.round(n).toLocaleString(locale);
+    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtAznHero = (n: number) => Math.round(n).toLocaleString("en-US");
 
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<SettingsState>(undefined);
   const [pending, startTransition] = useTransition();
 
-  // Run the server action inside a transition; close the modal on success.
-  // (Closing here, in the submit handler, avoids a setState-in-effect.)
   function submit(formData: FormData) {
     startTransition(async () => {
       const result = await setMonthlyGoal(undefined, formData);
@@ -54,12 +55,12 @@ export function MonthlyGoalProgress({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 font-semibold">
+          <h3 className="flex items-center gap-2 font-semibold text-[#0b1628]">
             <Target className="h-4 w-4 text-[var(--brand-strong)]" />
             {t("goal.title")}
           </h3>
           <button onClick={() => setOpen(false)} className="-mr-1 p-1" aria-label={t("common.close")}>
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 text-[#0b1628]" />
           </button>
         </div>
 
@@ -119,19 +120,35 @@ export function MonthlyGoalProgress({
     </div>
   ) : null;
 
-  // Hero variant: a large revenue figure is the focal point; the goal bar sits
-  // beneath it. Used in the dashboard's top hero band.
   if (variant === "hero") {
+    const numClass = dark
+      ? "text-white"
+      : "text-[var(--foreground)]";
+    const trackClass = dark
+      ? "h-[5px] rounded-full overflow-hidden bg-white/10"
+      : "h-2.5 overflow-hidden rounded-full bg-slate-100";
+    const fillClass = dark
+      ? "h-full rounded-full bg-[#3b7bf6] transition-[width] duration-[1200ms] ease-[cubic-bezier(.4,0,.2,1)]"
+      : `h-full rounded-full ${reached ? "bg-[var(--signal-ok)]" : "bg-[var(--brand)]"}`;
+    const goalTextClass = dark ? "text-white/40" : "text-[var(--muted)]";
+    const reachedTextClass = dark ? "text-[#3b7bf6]" : "text-[var(--signal-ok)]";
+
     return (
       <div>
-        <div className="text-4xl font-semibold tracking-tight">
-          {fmtAznHero(current)} <span className="text-2xl font-normal text-[var(--muted)]">₼</span>
+        <div className={`font-extrabold leading-none tracking-[-2px] ${dark ? "text-[42px]" : "text-4xl tracking-tight font-semibold"} ${numClass}`}>
+          {fmtAznHero(current)}
+          {dark && <span className="text-[22px] font-bold opacity-55 ml-1.5 tracking-normal">₼</span>}
+          {!dark && <span className="text-2xl font-normal text-[var(--muted)] ml-1">₼</span>}
         </div>
         {goal == null ? (
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border)] px-3 py-2 text-xs text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand-strong)]"
+            className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs transition-colors ${
+              dark
+                ? "border-white/20 text-white/40 hover:border-white/40 hover:text-white/60"
+                : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand-strong)]"
+            }`}
           >
             <Target className="h-3.5 w-3.5" />
             {t("goal.set")}
@@ -140,27 +157,28 @@ export function MonthlyGoalProgress({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="group mt-3 block w-full text-left"
+            className="group mt-4 block w-full text-left"
             aria-label={t("goal.change")}
           >
-            <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className={`h-full rounded-full ${reached ? "bg-[var(--signal-ok)]" : "bg-[var(--brand)]"}`}
-                style={{ width: `${pct}%` }}
-              />
+            <div className={trackClass}>
+              <div className={fillClass} style={{ width: `${pct}%` }} />
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-xs text-[var(--muted)]">
+            <div className={`mt-2 flex items-center justify-between text-xs ${goalTextClass}`}>
               <span className="flex items-center gap-1">
                 {t("goal.target")}: {fmtAznHero(goal)} ₼
-                <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                {!dark && <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />}
               </span>
-              <span>{pct.toFixed(0)}%</span>
+              {reached ? (
+                <span className="flex items-center gap-1.5">
+                  <span className={`font-bold ${reachedTextClass}`}>{t("goal.reached")}</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${dark ? "bg-[rgba(59,123,246,.18)] text-[#3b7bf6]" : "text-[var(--signal-ok)]"}`}>
+                    100%
+                  </span>
+                </span>
+              ) : (
+                <span>{pct.toFixed(0)}%</span>
+              )}
             </div>
-            {reached && (
-              <p className="mt-1 text-[11px] font-medium text-[var(--signal-ok)]">
-                {t("goal.reached")}
-              </p>
-            )}
           </button>
         )}
         {modal}

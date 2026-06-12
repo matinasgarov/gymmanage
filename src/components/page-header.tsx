@@ -31,7 +31,7 @@ export function PageHeader({
               className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${dark ? "bg-white/10" : "bg-[var(--brand-soft)]"}`}
             >
               <Icon
-                className={`w-5 h-5 ${dark ? "text-[var(--brand)]" : "text-[var(--brand-strong)]"}`}
+                className={`w-5 h-5 ${dark ? "text-[#3b7bf6]" : "text-[var(--brand-strong)]"}`}
               />
             </div>
           )}

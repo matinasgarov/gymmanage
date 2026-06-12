@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Pause, Play, Search, ChevronDown } from "lucide-react";
 import { verifyScan, overrideScan, manualLookup, type ScanResult } from "@/lib/scan-actions";
 import { useT } from "@/components/i18n-provider";
 
@@ -26,6 +27,8 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
   const [lookupResults, setLookupResults] = useState<
     Awaited<ReturnType<typeof manualLookup>>
   >([]);
+  const [manualOpen, setManualOpen] = useState(false);
+  const manualInputRef = useRef<HTMLInputElement | null>(null);
   const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
   const lastTokenRef = useRef<{ token: string; t: number } | null>(null);
   const busyRef = useRef(false);
@@ -128,12 +131,15 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
   useEffect(() => () => { void stopCamera(); }, [stopCamera]);
 
   useEffect(() => {
+    // Camera init on mount is an external-system sync, not a render-derived state update.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void startCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (lookupQuery.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear debounced results
       setLookupResults([]);
       return;
     }
@@ -156,63 +162,108 @@ export function Scanner({ canOverride }: { canOverride: boolean }) {
     );
   }
 
+  const scanning = state.mode === "scanning";
+  const status = error
+    ? { dot: "#ef4444", text: t("scan.statusError"), stopped: true }
+    : scanning
+      ? { dot: "#10b981", text: t("scan.statusScanning"), stopped: false }
+      : { dot: "#8aa0bc", text: t("scan.statusStopped"), stopped: true };
+
   return (
-    <div>
-      <div className="bg-black rounded-lg overflow-hidden mb-3" style={{ aspectRatio: "1 / 1" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Viewfinder */}
+      <div className="vf-card">
         <div id={SCANNER_ELEMENT_ID} className="w-full h-full" />
+        <div className="vf-overlay" />
+        <div className={`vf-scanline${scanning ? "" : " paused"}`} />
+        <div className="vf-status">
+          <span
+            className={`vf-status-dot${status.stopped ? " stopped" : ""}`}
+            style={{ background: status.dot }}
+          />
+          <span>{status.text}</span>
+        </div>
       </div>
 
-      {state.mode === "idle" && (
-        <button onClick={startCamera} className="btn-brand w-full">
-          {t("scan.start")}
-        </button>
-      )}
-      {state.mode === "scanning" && (
+      {/* Stop / Start */}
+      {scanning ? (
         <button
           onClick={async () => {
             await stopCamera();
             reset();
           }}
-          className="btn-ghost w-full"
+          className="btn-scan-toggle active"
         >
+          <Pause className="w-[15px] h-[15px]" fill="currentColor" strokeWidth={0} />
           {t("scan.stop")}
+        </button>
+      ) : (
+        <button onClick={startCamera} className="btn-scan-toggle stopped">
+          <Play className="w-[15px] h-[15px]" fill="currentColor" strokeWidth={0} />
+          {t("scan.start")}
         </button>
       )}
 
-      {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <details className="mt-6 bg-white border rounded-lg">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-          {t("scan.manualLookup")}
-        </summary>
-        <div className="p-4 border-t">
-          <input
-            value={lookupQuery}
-            onChange={(e) => setLookupQuery(e.target.value)}
-            placeholder={t("scan.manualPlaceholder")}
-            className="w-full px-3 py-2 border rounded-md"
-          />
-          {lookupResults.length > 0 && (
-            <ul className="mt-3 divide-y border rounded-md">
-              {lookupResults.map((m) => (
-                <li key={m.id} className="px-3 py-2 flex justify-between items-center text-sm">
-                  <div>
-                    <div className="font-medium">{m.name}</div>
-                    <div className="text-xs text-neutral-600">
-                      {m.publicId} · {m.phone}
+      {/* Manual search */}
+      <div className="manual-row">
+        <button
+          type="button"
+          className={`manual-toggle${manualOpen ? " open" : ""}`}
+          onClick={() => {
+            const next = !manualOpen;
+            setManualOpen(next);
+            if (next) setTimeout(() => manualInputRef.current?.focus(), 60);
+          }}
+        >
+          <Search className="w-[15px] h-[15px] manual-ico" strokeWidth={2.3} />
+          <span style={{ flex: 1 }}>{t("scan.manualLookup")}</span>
+          <ChevronDown className="manual-toggle-arrow w-[14px] h-[14px]" strokeWidth={2.3} />
+        </button>
+        {manualOpen && (
+          <div className="manual-body">
+            <div className="manual-input-wrap">
+              <input
+                ref={manualInputRef}
+                value={lookupQuery}
+                onChange={(e) => setLookupQuery(e.target.value)}
+                placeholder={t("scan.manualPlaceholder")}
+                className="manual-input"
+              />
+            </div>
+            {lookupResults.length > 0 && (
+              <ul style={{ marginTop: 12, borderRadius: 10, border: "1px solid var(--d-bdr)", overflow: "hidden" }}>
+                {lookupResults.map((m, i) => (
+                  <li
+                    key={m.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 12px",
+                      borderBottom: i < lookupResults.length - 1 ? "1px solid var(--d-bdr)" : "none",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--d-tx)" }}>{m.name}</div>
+                      <div style={{ fontSize: 11.5, color: "var(--d-tx3)", fontWeight: 500 }}>
+                        {m.publicId} · {m.phone}
+                      </div>
                     </div>
-                  </div>
-                  {canOverride ? (
-                    <ManualOverrideButton memberId={m.id} />
-                  ) : (
-                    <span className="text-xs text-neutral-500">{m.status}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </details>
+                    {canOverride ? (
+                      <ManualOverrideButton memberId={m.id} />
+                    ) : (
+                      <span style={{ fontSize: 11.5, color: "var(--d-tx3)" }}>{m.status}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

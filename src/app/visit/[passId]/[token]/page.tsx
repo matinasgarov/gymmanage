@@ -27,7 +27,7 @@ export default async function VisitorPassPage({
   ]);
   if (!pass) notFound();
 
-  const expired = pass.expiresAt.getTime() < Date.now();
+  const expired = pass.expiresAt.getTime() < new Date().getTime();
 
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";

@@ -13,15 +13,15 @@
   --brand-soft: #ccfbf1;
 
   /* Sidebar */
-  --sidebar-bg: #1f3a47;
+  --sidebar-bg: #0b1628;
   --sidebar-fg: #cbd5e1;
   --sidebar-fg-active: #ffffff;
-  --sidebar-item-active: #14b8a6;
-  --sidebar-divider: rgba(255, 255, 255, 0.06);
+  --sidebar-item-active: #3b7bf6;
+  --sidebar-divider: rgba(255, 255, 255, 0.07);
 
-  /* Header banner */
-  --header-grad-from: #16505f;
-  --header-grad-to: #0f3a48;
+  /* Header banner — navy gradient matching the sidebar + dashboard header */
+  --header-grad-from: #0f2044;
+  --header-grad-to: #0b1628;
 
   /* Dashboard semantic signals — muted by default, color only on abnormal data.
      Default state reads neutral; these light up to pull the eye to what needs action. */
@@ -144,6 +144,108 @@ textarea::placeholder {
   .pulse-dot::after { animation: none; }
 }
 
+/* ── Dashboard redesign tokens ──────────────────────────────────────── */
+.dash {
+  --d-bg:         #eef1f8;
+  --d-navy:       #0b1628;
+  --d-navy2:      #0f2044;
+  --d-accent:     #3b7bf6;
+  --d-accent-lt:  rgba(59, 123, 246, 0.12);
+  --d-accent-md:  rgba(59, 123, 246, 0.22);
+  --d-warn:       #f59e0b;
+  --d-warn-lt:    rgba(245, 158, 11, 0.1);
+  --d-blue:       #06b6d4;
+  --d-blue-lt:    rgba(6, 182, 212, 0.1);
+  --d-purple:     #8b5cf6;
+  --d-purple-lt:  rgba(139, 92, 246, 0.1);
+  --d-green:      #10b981;
+  --d-green-lt:   rgba(16, 185, 129, 0.12);
+  --d-red:        #ef4444;
+  --d-red-lt:     rgba(239, 68, 68, 0.1);
+  --d-bdr:        rgba(11, 22, 40, 0.07);
+  --d-green:      #10b981;
+  --d-green-lt:   rgba(16, 185, 129, 0.12);
+  --d-red:        #ef4444;
+  --d-red-lt:     rgba(239, 68, 68, 0.1);
+  --d-tx:         #0b1628;
+  --d-tx2:        #4a637a;
+  --d-tx3:        #8aa0bc;
+  --d-bdr:        rgba(11, 22, 40, 0.07);
+  --d-sh1:        0 1px 3px rgba(11,22,40,.05), 0 2px 8px rgba(11,22,40,.04);
+  --d-sh2:        0 4px 24px rgba(11,22,40,.1), 0 1px 4px rgba(11,22,40,.05);
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  background: var(--d-bg);
+  color: var(--d-tx);
+}
+
+/* Audit log entry hover */
+.dash .audit-entry { transition: background 0.12s; }
+.dash .audit-entry:hover { background: var(--d-bg); }
+
+/* Reminder WA button hover */
+.dash .reminder-wa-btn:hover { background: rgba(59,123,246,.12) !important; color: #3b7bf6 !important; border-color: #3b7bf6 !important; }
+
+/* Scan-to-scanner CTA button */
+.dash-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--d-accent-lt);
+  color: var(--d-accent);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  align-self: flex-start;
+  transition: background 0.18s, transform 0.12s;
+  font-family: inherit;
+}
+.dash-scan-btn:hover {
+  background: var(--d-accent-md);
+  transform: translateX(3px);
+}
+
+/* Primary blue CTA — page headers, "Yeni üzv" */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #3b7bf6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(59, 123, 246, 0.3);
+  transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+.btn-primary:hover {
+  background: #2d6ef0;
+  box-shadow: 0 4px 16px rgba(59, 123, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Dashboard progress bar track for the dark revenue card */
+.dash-prog-track {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.dash-prog-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--d-accent);
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* html5-qrcode: fill the scanner container and hide the library's own controls */
 #gympass-qr-reader {
   height: 100%;
@@ -158,7 +260,194 @@ textarea::placeholder {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
+  opacity: 0.92;
 }
 #gympass-qr-reader__dashboard {
   display: none !important;
+}
+
+/* ── Scanner page — viewfinder + controls (Scanner.html prototype) ──── */
+.dash .vf-card {
+  background: #0b1628;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 1 / 1;
+  box-shadow: var(--d-sh2);
+}
+.dash .vf-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 62% 62% at 50% 50%, transparent 48%, rgba(6, 10, 20, 0.72) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+.dash .vf-scanline {
+  position: absolute;
+  left: 19%;
+  right: 19%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #3b7bf6, transparent);
+  border-radius: 2px;
+  z-index: 3;
+  opacity: 0.85;
+  box-shadow: 0 0 10px #3b7bf6, 0 0 24px rgba(59, 123, 246, 0.4);
+  animation: scanline 2.4s ease-in-out infinite;
+}
+.dash .vf-scanline.paused {
+  animation-play-state: paused;
+  opacity: 0;
+}
+@keyframes scanline {
+  0% { top: 18%; }
+  50% { top: 80%; }
+  100% { top: 18%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash .vf-scanline { animation: none; }
+}
+.dash .vf-status {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(11, 18, 28, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 4;
+}
+.dash .vf-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: statusPulse 1.6s ease infinite;
+}
+.dash .vf-status-dot.stopped { animation: none; }
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Stop / Start button */
+.dash .btn-scan-toggle {
+  width: 100%;
+  height: 46px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.dash .btn-scan-toggle.active {
+  background: #fff;
+  color: var(--d-tx);
+  box-shadow: var(--d-sh1);
+  border: 1px solid var(--d-bdr);
+}
+.dash .btn-scan-toggle.active:hover { background: var(--d-bg); }
+.dash .btn-scan-toggle.stopped {
+  background: #3b7bf6;
+  color: #fff;
+  box-shadow: 0 2px 14px rgba(59, 123, 246, 0.4);
+}
+.dash .btn-scan-toggle.stopped:hover {
+  box-shadow: 0 4px 20px rgba(59, 123, 246, 0.55);
+  transform: translateY(-1px);
+}
+
+/* Manual search row */
+.dash .manual-row {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--d-bdr);
+  box-shadow: var(--d-sh1);
+  overflow: hidden;
+}
+.dash .manual-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--d-tx);
+  text-align: left;
+  transition: background 0.15s;
+}
+.dash .manual-toggle:hover { background: var(--d-bg); }
+.dash .manual-toggle svg.manual-ico { color: #3b7bf6; flex-shrink: 0; }
+.dash .manual-toggle-arrow {
+  color: var(--d-tx3);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.dash .manual-toggle.open .manual-toggle-arrow { transform: rotate(180deg); }
+.dash .manual-body { padding: 0 16px 14px; }
+.dash .manual-input-wrap { display: flex; gap: 8px; margin-top: 4px; }
+.dash .manual-input {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--d-bdr);
+  background: var(--d-bg);
+  color: var(--d-tx);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 0 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.dash .manual-input::placeholder { color: var(--d-tx3); font-weight: 500; }
+.dash .manual-input:focus {
+  border-color: #3b7bf6;
+  box-shadow: 0 0 0 3px rgba(59, 123, 246, 0.12);
+}
+
+/* Quick action buttons (Tez giriş / Günlük QR) */
+.dash .qbtn {
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--d-bdr);
+  background: #fff;
+  color: var(--d-tx);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--d-sh1);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s, border-color 0.15s;
+}
+.dash .qbtn:hover {
+  background: var(--d-accent-lt);
+  border-color: var(--d-accent);
+  color: var(--d-accent);
+  box-shadow: var(--d-sh2);
+  transform: translateY(-1px);
 }

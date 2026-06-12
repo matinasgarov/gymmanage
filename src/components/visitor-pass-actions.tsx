@@ -10,21 +10,13 @@ export function VisitorPassActions() {
   const [open, setOpen] = useState<"quick" | "daypass" | null>(null);
 
   return (
-    <div className="grid grid-cols-2 gap-2 mt-4">
-      <button
-        type="button"
-        onClick={() => setOpen("quick")}
-        className="btn-ghost inline-flex items-center justify-center gap-1.5"
-      >
-        <UserPlus className="w-4 h-4" />
+    <div className="grid grid-cols-2 gap-2.5 mt-3.5">
+      <button type="button" onClick={() => setOpen("quick")} className="qbtn">
+        <UserPlus className="w-[15px] h-[15px]" strokeWidth={2.3} />
         {t("scan.quickEntry")}
       </button>
-      <button
-        type="button"
-        onClick={() => setOpen("daypass")}
-        className="btn-ghost inline-flex items-center justify-center gap-1.5"
-      >
-        <QrCode className="w-4 h-4" />
+      <button type="button" onClick={() => setOpen("daypass")} className="qbtn">
+        <QrCode className="w-[15px] h-[15px]" strokeWidth={2.3} />
         {t("scan.daypass")}
       </button>
 

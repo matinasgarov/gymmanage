@@ -20,6 +20,7 @@ export default async function VisitorsPage() {
       _count: { select: { checkIns: true } },
     },
   });
+  const nowMs = new Date().getTime();
 
   return (
     <AppShell>
@@ -29,52 +30,57 @@ export default async function VisitorsPage() {
         icon={UserCheck}
         tone="dark"
       />
-      <div className="px-4 lg:px-8 py-6">
+      <div className="dash min-h-full px-4 lg:px-7 py-6">
         {passes.length === 0 ? (
-          <div className="card p-10 text-center">
-            <UserCheck className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--muted)]">{t("visitors.noVisitors")}</p>
+          <div style={{ background: "white", borderRadius: 16, boxShadow: "var(--d-sh1)", padding: "48px 20px", textAlign: "center" }}>
+            <UserCheck style={{ width: 32, height: 32, color: "var(--d-tx3)", margin: "0 auto 10px" }} />
+            <p style={{ fontSize: 13, color: "var(--d-tx3)", fontWeight: 600 }}>{t("visitors.noVisitors")}</p>
           </div>
         ) : (
-          <div className="card divide-y divide-[var(--border)]">
-            {passes.map((p) => {
+          <div style={{ background: "white", borderRadius: 16, boxShadow: "var(--d-sh1)", overflow: "hidden", padding: "6px 20px" }}>
+            {passes.map((p, i) => {
               const isDayPass = p.token !== null;
-              const expired = p.expiresAt.getTime() < Date.now();
+              const expired = p.expiresAt.getTime() < nowMs;
+              const typeBadge = isDayPass
+                ? { bg: "rgba(6,182,212,.15)", color: "#06b6d4" }
+                : { bg: "rgba(16,185,129,.12)", color: "#10b981" };
               return (
                 <div
                   key={p.id}
-                  className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "14px 0",
+                    borderBottom: i < passes.length - 1 ? "1px solid var(--d-bdr)" : "none",
+                  }}
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--d-tx)" }}>
                         {p.name ?? t("visitors.anonymous")}
                       </span>
-                      <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full ${
-                          isDayPass
-                            ? "bg-sky-100 text-sky-700"
-                            : "bg-emerald-100 text-emerald-700"
-                        }`}
-                      >
+                      <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 6, background: typeBadge.bg, color: typeBadge.color }}>
                         {isDayPass ? t("visitors.typeDayPass") : t("visitors.typeQuickEntry")}
                       </span>
                       {isDayPass && expired && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                        <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 6, background: "var(--d-bg)", color: "var(--d-tx3)" }}>
                           {t("visitors.expired")}
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-[var(--muted)] mt-0.5">
+                    <div style={{ fontSize: 11.5, color: "var(--d-tx3)", fontWeight: 500, marginTop: 3 }}>
                       {fmtDateTime(p.createdAt)} · {t(`method.${p.method}`)}
                       {p.phone ? ` · ${p.phone}` : ""}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-[var(--muted)]">
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, color: "var(--d-tx3)", fontWeight: 500 }}>
                       {t("units.entries", { count: p._count.checkIns })}
                     </span>
-                    <span className="text-sm font-medium">{formatAZN(p.amount)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "var(--d-tx)" }}>{formatAZN(p.amount)}</span>
                   </div>
                 </div>
               );

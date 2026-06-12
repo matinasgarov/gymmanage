@@ -99,7 +99,10 @@ export function Sidebar({
   return (
     <>
       {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-30 bg-[var(--sidebar-bg)] text-white flex items-center justify-between px-4 h-14">
+      <div
+        style={{ background: "linear-gradient(135deg, #0f2044, var(--sidebar-bg))" }}
+        className="lg:hidden sticky top-0 z-30 text-white flex items-center justify-between px-4 h-14"
+      >
         <button
           onClick={() => setOpen(true)}
           aria-label={t("nav.menu")}
@@ -112,12 +115,12 @@ export function Sidebar({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={gymLogoUrl} alt={gymName} className="w-6 h-6 rounded object-cover" />
           ) : (
-            <Dumbbell className="w-4 h-4 text-[var(--brand)]" />
+            <Dumbbell className="w-4 h-4 text-[var(--sidebar-item-active)]" />
           )}
           <span className="font-semibold text-sm truncate">{gymName}</span>
         </div>
         <Link href="/scan" aria-label="Skaner" className="p-2 -mr-2">
-          <ScanLine className="w-5 h-5 text-[var(--brand)]" />
+          <ScanLine className="w-5 h-5 text-[var(--sidebar-item-active)]" />
         </Link>
       </div>
 
@@ -130,7 +133,8 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 lg:z-auto h-screen w-60 bg-[var(--sidebar-bg)] text-[var(--sidebar-fg)] flex flex-col transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        style={{ background: "linear-gradient(135deg, #0f2044, var(--sidebar-bg))" }}
+        className={`fixed top-0 left-0 z-50 h-screen w-60 text-[var(--sidebar-fg)] flex flex-col transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         <div className="px-4 h-16 flex items-center justify-between border-b border-[var(--sidebar-divider)]">
           <div className="flex items-center gap-2 min-w-0">
@@ -167,16 +171,16 @@ export function Sidebar({
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active
-                  ? "bg-[var(--brand)]/15 text-white border-l-2 border-[var(--brand)]"
+                  ? "bg-[var(--sidebar-item-active)]/[0.13] text-[var(--sidebar-item-active)] border-l-[3px] border-[var(--sidebar-item-active)]"
                   : "hover:bg-white/5 text-[var(--sidebar-fg)]"
                   }`}
               >
                 <Icon
-                  className={`w-[18px] h-[18px] ${active ? "text-[var(--brand)]" : item.highlight ? "text-[var(--brand)]" : "text-[var(--sidebar-fg)]"}`}
+                  className={`w-[18px] h-[18px] ${active ? "text-[var(--sidebar-item-active)]" : item.highlight ? "text-[var(--sidebar-item-active)]" : "text-[var(--sidebar-fg)]"}`}
                 />
                 <span>{t(item.labelKey)}</span>
                 {item.highlight && !active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse" />
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--sidebar-item-active)] animate-pulse" />
                 )}
               </Link>
             );

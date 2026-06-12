@@ -9,44 +9,50 @@ export function Heatmap({ data }: { data: HeatmapResult }) {
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
   return (
-    <div className="overflow-x-auto -mx-2 px-2">
-      <div className="min-w-[640px]">
-        {/* Hour header */}
-        <div className="flex">
-          <div className="w-10 shrink-0" />
+    <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: 720 }}>
+        {/* Hour header row */}
+        <div style={{ display: "flex" }}>
+          <div style={{ width: 36, flexShrink: 0 }} />
           {hours.map((h) => (
             <div
               key={h}
-              className="flex-1 text-center text-[10px] text-[var(--muted)] pb-1"
+              style={{ flex: 1, textAlign: "center", fontSize: 10, fontWeight: 600, color: "#8aa0bc", paddingBottom: 4 }}
             >
               {h}
             </div>
           ))}
         </div>
+        {/* Day rows */}
         {dayLabels.map((label, day) => (
-          <div key={day} className="flex items-stretch">
-            <div className="w-10 shrink-0 flex items-center text-[11px] text-[var(--muted)]">
+          <div key={day} style={{ display: "flex", alignItems: "stretch", marginBottom: 3 }}>
+            <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 8, fontSize: 10, fontWeight: 600, color: "#8aa0bc" }}>
               {label}
             </div>
             {hours.map((hour) => {
               const cell = grid[day * 24 + hour];
-              const intensity = max > 0 ? cell.count / max : 0;
-              const opacity = cell.count === 0 ? 0 : 0.15 + intensity * 0.85;
+              const opacity = max > 0 && cell.count > 0 ? Math.max(0.12, cell.count / max) : 0;
+              const tip = cell.count > 0
+                ? `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — ${t("units.entries", { count: cell.count })}`
+                : `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — 0`;
               return (
                 <div
                   key={hour}
-                  className="flex-1 aspect-square rounded-[3px] mx-[1px] my-[1px] border border-slate-100"
                   style={{
-                    backgroundColor:
-                      cell.count > 0
-                        ? `color-mix(in srgb, var(--brand) ${Math.round(opacity * 100)}%, transparent)`
-                        : "rgb(248 250 252)",
+                    flex: 1,
+                    height: 28,
+                    borderRadius: 5,
+                    marginLeft: 1.5,
+                    marginRight: 1.5,
+                    background: cell.count > 0
+                      ? `rgba(59,123,246,${opacity})`
+                      : "rgba(59,123,246,.12)",
+                    cursor: "default",
+                    transition: "transform 0.1s",
                   }}
-                  title={
-                    cell.count > 0
-                      ? `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — ${t("units.entries", { count: cell.count })}`
-                      : `${dayLabelsFull[day]} ${hour.toString().padStart(2, "0")}:00 — 0`
-                  }
+                  title={tip}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1.15)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
                 />
               );
             })}

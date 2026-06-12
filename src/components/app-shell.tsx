@@ -11,7 +11,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         userName={user.name}
         role={user.role}
       />
-      <div className="flex-1 min-w-0">{children}</div>
+      <div className="flex-1 min-w-0 bg-[#eef1f8] lg:ml-60">{children}</div>
     </div>
   );
 }

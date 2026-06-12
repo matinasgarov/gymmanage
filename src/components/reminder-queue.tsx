@@ -1,24 +1,84 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, MessageCircle, SkipForward, ExternalLink } from "lucide-react";
+import {
+  AlertCircle,
+  Clock,
+  CalendarDays,
+  MessageCircle,
+  CheckCircle2,
+  type LucideIcon,
+} from "lucide-react";
 import { recordReminderSent } from "@/lib/reminder-actions";
 import { buildWaUrl, pickTemplate, renderTemplate } from "@/lib/templates";
 import { useT } from "@/components/i18n-provider";
 
 export type ReminderItem = {
   group: "overdue" | "dueNow" | "expiring";
-  // payment groups (overdue / dueNow)
   paymentId?: string;
   period?: string;
   amount?: number;
   daysLate?: number;
-  // expiring group
   daysLeft?: number;
   expiryDate?: string;
   member: { id: string; name: string; phone: string; publicId: string };
 };
+
+type GroupConfig = {
+  key: "overdue" | "dueNow" | "expiring";
+  icon: LucideIcon;
+  iconColor: string;
+  iconBg: string;
+  badgeCls: string;
+  subtitleKey: string;
+  emptyKey: string;
+};
+
+const GROUP_CONFIGS: GroupConfig[] = [
+  {
+    key: "overdue",
+    icon: AlertCircle,
+    iconColor: "#ef4444",
+    iconBg: "rgba(239,68,68,.1)",
+    badgeCls: "danger",
+    subtitleKey: "reminders.subOverdue",
+    emptyKey: "reminders.emptyOverdue",
+  },
+  {
+    key: "dueNow",
+    icon: Clock,
+    iconColor: "#f59e0b",
+    iconBg: "rgba(245,158,11,.12)",
+    badgeCls: "warn",
+    subtitleKey: "reminders.subDueNow",
+    emptyKey: "reminders.emptyDueNow",
+  },
+  {
+    key: "expiring",
+    icon: CalendarDays,
+    iconColor: "#06b6d4",
+    iconBg: "rgba(6,182,212,.15)",
+    badgeCls: "muted",
+    subtitleKey: "reminders.subExpiring",
+    emptyKey: "reminders.emptyExpiring",
+  },
+];
+
+const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+  danger: { bg: "rgba(239,68,68,.1)",   color: "#ef4444" },
+  warn:   { bg: "rgba(245,158,11,.12)", color: "#f59e0b" },
+  muted:  { bg: "var(--d-bg)",          color: "var(--d-tx3)" },
+};
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 export function ReminderQueue({
   items,
@@ -34,87 +94,68 @@ export function ReminderQueue({
   summary: { amount: number; people: number };
 }) {
   const t = useT();
-  const [index, setIndex] = useState(0);
-  const [sentCount, setSentCount] = useState(0);
-  const [skippedCount, setSkippedCount] = useState(0);
+  // Track which paymentIds (or member ids for expiring) have been actioned
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const current = items[index];
-  const remaining = items.length - index;
-  const total = items.length;
+  if (items.length === 0) {
+    return (
+      <div
+        style={{
+          background: "white", borderRadius: 16, padding: "48px 20px",
+          boxShadow: "var(--d-sh1)", textAlign: "center",
+        }}
+      >
+        <CheckCircle2 style={{ width: 40, height: 40, color: "#10b981", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--d-tx)", marginBottom: 4 }}>
+          {t("reminders.allClear")}
+        </div>
+        <p style={{ fontSize: 12.5, color: "var(--d-tx3)" }}>{t("reminders.allClearSub")}</p>
+      </div>
+    );
+  }
 
-  const waUrl = useMemo(() => {
-    if (!current) return "";
-    if (current.group === "expiring") {
+  const dismiss = (key: string) =>
+    setDismissed((prev) => new Set([...prev, key]));
+
+  const buildWa = (item: ReminderItem): string => {
+    if (item.group === "expiring") {
       const tmpl = pickTemplate("expiring", expiringTemplate);
       const msg = renderTemplate(tmpl, {
-        memberName: current.member.name,
+        memberName: item.member.name,
         gymName,
-        daysLeft: current.daysLeft ?? 0,
-        expiryDate: current.expiryDate ?? "",
+        daysLeft: item.daysLeft ?? 0,
+        expiryDate: item.expiryDate ?? "",
       });
-      return buildWaUrl(current.member.phone, msg);
+      return buildWaUrl(item.member.phone, msg);
     }
     const tmpl = pickTemplate("reminder", reminderTemplate);
     const msg = renderTemplate(tmpl, {
-      memberName: current.member.name,
+      memberName: item.member.name,
       gymName,
-      period: current.period ?? "",
-      amount: `${(current.amount ?? 0).toFixed(2)}₼`,
+      period: item.period ?? "",
+      amount: `${(item.amount ?? 0).toFixed(2)}₼`,
     });
-    return buildWaUrl(current.member.phone, msg);
-  }, [current, gymName, reminderTemplate, expiringTemplate]);
-
-  if (total === 0) {
-    return (
-      <div className="card p-10 text-center max-w-md mx-auto">
-        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-        <h2 className="font-semibold mb-1">{t("reminders.allClear")}</h2>
-        <p className="text-sm text-[var(--muted)]">{t("reminders.allClearSub")}</p>
-      </div>
-    );
-  }
-
-  if (!current) {
-    return (
-      <div className="card p-10 text-center max-w-md mx-auto">
-        <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-        <h2 className="font-semibold mb-1">{t("reminders.allDone")}</h2>
-        <p className="text-sm text-[var(--muted)]">
-          {t("reminders.allDoneSub", { sent: sentCount, skipped: skippedCount })}
-        </p>
-        <button
-          onClick={() => {
-            setIndex(0);
-            setSentCount(0);
-            setSkippedCount(0);
-          }}
-          className="btn-ghost mt-4"
-        >
-          {t("reminders.restart")}
-        </button>
-      </div>
-    );
-  }
-
-  const onSent = async () => {
-    if (current.paymentId) void recordReminderSent(current.paymentId, "whatsapp");
-    setSentCount((n) => n + 1);
-    setIndex((i) => i + 1);
-  };
-  const onSkip = async () => {
-    if (current.paymentId) void recordReminderSent(current.paymentId, "skip");
-    setSkippedCount((n) => n + 1);
-    setIndex((i) => i + 1);
+    return buildWaUrl(item.member.phone, msg);
   };
 
-  const progressPct = (index / total) * 100;
+  const itemKey = (item: ReminderItem) =>
+    item.paymentId ?? `${item.group}-${item.member.id}`;
 
   return (
-    <div className="max-w-md mx-auto space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {/* Summary bar */}
       {summary.amount > 0 && (
-        <div className="card px-4 py-3 flex items-center justify-between">
-          <span className="text-sm font-medium">{t("reminders.summaryTitle")}</span>
-          <span className="text-sm font-semibold">
+        <div
+          style={{
+            background: "white", borderRadius: 16, padding: "14px 20px",
+            boxShadow: "var(--d-sh1)", display: "flex", alignItems: "center",
+            justifyContent: "space-between", gap: 12,
+          }}
+        >
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--d-tx)" }}>
+            {t("reminders.summaryTitle")}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "var(--d-tx)" }}>
             {t("reminders.summaryValue", {
               amount: summary.amount.toFixed(2),
               people: summary.people,
@@ -123,106 +164,122 @@ export function ReminderQueue({
         </div>
       )}
 
-      <div>
-        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1.5">
-          <span>
-            {index + 1} / {total}
-          </span>
-          <span>
-            ✓ {sentCount} · ⤴ {skippedCount} · {t("reminders.remaining", { count: remaining })}
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+      {GROUP_CONFIGS.map((cfg) => {
+        const groupItems = items
+          .filter((i) => i.group === cfg.key && !dismissed.has(itemKey(i)));
+        const Icon = cfg.icon;
+
+        return (
           <div
-            className="h-full bg-[var(--brand)] transition-all"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="card p-6 text-center">
-        <span
-          className={`inline-block text-[11px] px-2 py-0.5 rounded-full mb-3 ${
-            current.group === "overdue"
-              ? "bg-red-50 text-red-700"
-              : current.group === "dueNow"
-                ? "bg-amber-50 text-amber-700"
-                : "bg-blue-50 text-blue-700"
-          }`}
-        >
-          {t(`reminders.group.${current.group}`)}
-        </span>
-
-        <div className="w-16 h-16 mx-auto rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center text-2xl font-semibold mb-3">
-          {current.member.name.slice(0, 1).toUpperCase()}
-        </div>
-        <h2 className="text-lg font-semibold">{current.member.name}</h2>
-        <p className="text-xs text-[var(--muted)]">
-          {current.member.publicId} · {current.member.phone}
-        </p>
-
-        {current.group === "expiring" ? (
-          <div className="grid grid-cols-2 gap-2 mt-4 text-sm">
-            <Stat label={t("reminders.statExpiry")} value={current.expiryDate ?? ""} />
-            <Stat
-              label={t("reminders.statDaysLeft")}
-              value={t("units.days", { count: current.daysLeft ?? 0 })}
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
-            <Stat label={t("reminders.statPeriod")} value={current.period ?? ""} />
-            <Stat
-              label={t("reminders.statAmount")}
-              value={`${(current.amount ?? 0).toFixed(2)}₼`}
-            />
-            <Stat
-              label={t("reminders.statDelay")}
-              value={t("units.days", { count: current.daysLate ?? 0 })}
-            />
-          </div>
-        )}
-
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={onSent}
-          className="mt-5 inline-flex items-center justify-center gap-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-full py-3 font-semibold"
-        >
-          <MessageCircle className="w-4 h-4" />
-          {t("reminders.sendWhatsapp")}
-        </a>
-
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          <button
-            onClick={onSkip}
-            className="btn-ghost inline-flex items-center justify-center gap-1.5"
+            key={cfg.key}
+            style={{
+              background: "white", borderRadius: 16,
+              boxShadow: "var(--d-sh1)", overflow: "hidden",
+            }}
           >
-            <SkipForward className="w-3.5 h-3.5" />
-            {t("reminders.skip")}
-          </button>
-          <Link
-            href={`/members/${current.member.id}`}
-            target="_blank"
-            className="btn-ghost inline-flex items-center justify-center gap-1.5"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            {t("reminders.viewProfile")}
-          </Link>
-        </div>
+            {/* Section header */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "20px 24px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: cfg.iconBg, color: cfg.iconColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon style={{ width: 16, height: 16 }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "var(--d-tx)", letterSpacing: "-0.3px" }}>
+                    {t(`reminders.group.${cfg.key}`)}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--d-tx3)" }}>
+                    {t(cfg.subtitleKey)}
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--d-tx3)", whiteSpace: "nowrap", paddingTop: 2 }}>
+                <b style={{ color: "var(--d-tx)" }}>{groupItems.length}</b> {t("reminders.persons")}
+              </span>
+            </div>
 
-        <p className="text-[11px] text-[var(--muted)] mt-3">{t("reminders.advanceHint")}</p>
-      </div>
-    </div>
-  );
-}
+            {/* Section body */}
+            <div style={{ padding: "14px 24px 20px" }}>
+              {groupItems.length === 0 ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--d-tx3)", padding: "6px 0 2px" }}>
+                  {t(cfg.emptyKey)} <span style={{ fontSize: 15 }}>🎉</span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {groupItems.map((item, i) => {
+                    const badge = BADGE_STYLES[cfg.badgeCls];
+                    const waUrl = buildWa(item);
+                    const key = itemKey(item);
+                    const detail =
+                      item.group === "expiring"
+                        ? `${t("reminders.statExpiry")}: ${item.expiryDate ?? ""} · ${t("reminders.statDaysLeft")}: ${t("units.days", { count: item.daysLeft ?? 0 })}`
+                        : `${t("reminders.statPeriod")}: ${item.period ?? ""} · ${(item.amount ?? 0).toFixed(2)}₼ · ${t("units.days", { count: item.daysLate ?? 0 })}`;
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-[var(--background)] rounded-lg py-2">
-      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
-      <div className="font-medium text-sm">{value}</div>
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 12,
+                          padding: "10px 0",
+                          borderBottom: i < groupItems.length - 1 ? "1px solid var(--d-bdr)" : "none",
+                        }}
+                      >
+                        {/* Avatar */}
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(59,123,246,.12)", color: "#3b7bf6", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {initials(item.member.name)}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                          <Link
+                            href={`/members/${item.member.id}`}
+                            style={{ fontSize: 13.5, fontWeight: 700, color: "var(--d-tx)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: "none" }}
+                          >
+                            {item.member.name}
+                          </Link>
+                          <div style={{ fontSize: 11.5, color: "var(--d-tx3)", fontWeight: 500 }}>
+                            {detail}
+                          </div>
+                        </div>
+
+                        {/* Badge */}
+                        <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 6, whiteSpace: "nowrap", flexShrink: 0, background: badge.bg, color: badge.color }}>
+                          {item.group === "overdue"
+                            ? t("reminders.badgeOverdue")
+                            : item.group === "dueNow"
+                            ? t("reminders.badgeDueNow")
+                            : t("reminders.badgeExpiring")}
+                        </span>
+
+                        {/* WA button */}
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => {
+                            if (item.paymentId) void recordReminderSent(item.paymentId, "whatsapp");
+                            dismiss(key);
+                          }}
+                          style={{
+                            width: 30, height: 30, borderRadius: 8,
+                            border: "1px solid var(--d-bdr)",
+                            background: "var(--d-bg)", color: "var(--d-tx3)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0, textDecoration: "none", transition: "background .15s, color .15s, border-color .15s",
+                          }}
+                          title={t("reminders.sendWhatsapp")}
+                          className="reminder-wa-btn"
+                        >
+                          <MessageCircle style={{ width: 13, height: 13 }} />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

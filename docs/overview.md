@@ -60,9 +60,13 @@ CONTACTED → CONVERTED / LOST. Converted leads become members in one click.
 Dashboard shows a "new leads" alert card.
 
 ### WhatsApp reminders
-Owners trigger reminders from `/reminders`: payment due, receipt confirmation,
-membership expiry warning, welcome message. Templates are customisable per gym.
-Messages open WhatsApp pre-filled for the member's phone number.
+`/reminders` is a collection queue split into three groups — **overdue** (past the
+grace window), **due now** (due today, still within grace), and **expiring**
+(membership ends within 7 days, no open debt). A summary bar shows how much money
+is collectable today and from how many people. Each row has a one-tap WhatsApp
+button that opens a pre-filled message and records the reminder as sent; actioned
+rows drop out of the list. Templates are customisable per gym. The dashboard shows
+a "collect today" pill linking straight to this queue.
 
 ### Attendance heatmap
 `/attendance` shows a 7 × 24 grid (day-of-week × hour-of-day) of GRANTED check-ins,
@@ -87,13 +91,38 @@ STAFF users see only the Skaner page. All management pages are owner-only.
 
 ---
 
+## UI / design system
+
+All owner-facing pages share one design language, scoped by a `.dash` context class
+in `src/app/globals.css` that exposes the design tokens (`--d-bg`, `--d-accent`
+`#3b7bf6`, `--d-tx`/`--d-tx2`/`--d-tx3` text ramp, `--d-bdr`, `--d-sh1`/`--d-sh2`
+shadows, semantic `--d-green`/`--d-red`/`--d-warn`/`--d-blue`). CSS variables only
+resolve inside `.dash`; components rendered outside it (e.g. `PageHeader`) hardcode
+the hex values.
+
+Conventions:
+- **PageHeader** (`tone="dark"`) — a navy gradient banner with icon, title, subtitle,
+  and optional tabs/actions, consistent across every page.
+- **Sidebar** is `fixed` full-height on desktop (content offset by `lg:ml-60`) so it
+  never scrolls away; it collapses to a slide-in drawer on mobile.
+- **Cards** — white surface, 16px radius, `--d-sh1`, `--d-bdr` row dividers; list
+  rows use a 36px avatar / title / meta / colored badge / action-button pattern.
+- Number formatting is pinned to `en-US` to avoid SSR/client hydration mismatches
+  (Node's ICU lacks full `az` locale data).
+
+Applied to: dashboard, members, payments, attendance, audit, reminders, retention,
+leads, visitors, and the scanner. The scanner (`/scan`) uses a navy viewfinder card
+with an animated scan line and a live status chip over the `html5-qrcode` camera feed.
+
+---
+
 ## Tech stack
 
 | Layer | Choice |
 |---|---|
 | Framework | Next.js 16 (App Router, Server Actions, RSC) |
 | Language | TypeScript / React 19 |
-| Styling | Tailwind CSS |
+| Styling | Tailwind CSS v4 + `.dash` design-token system (see UI section) |
 | ORM | Prisma 6 → PostgreSQL |
 | Auth | Session cookie (httpOnly, SHA-256 password hashing) |
 | QR encoding | `qrcode.react` (client), HMAC-SHA256 (server) |
@@ -123,7 +152,9 @@ at the database layer — isolation is enforced in application code.
 | `src/lib/attendance.ts` | Heatmap bucketing (Asia/Baku) |
 | `src/components/rotating-qr.tsx` | Member pass page client |
 | `src/components/scanner.tsx` | Door scanner client |
-| `src/components/sidebar.tsx` | Nav + role gating |
+| `src/components/sidebar.tsx` | Nav + role gating (fixed desktop layout) |
+| `src/components/page-header.tsx` | Shared navy banner header |
+| `src/app/globals.css` | `.dash` design tokens + component CSS |
 
 ---
 

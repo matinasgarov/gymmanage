@@ -22,18 +22,45 @@ export function LeadRowActions({
     return (
       <Link
         href={`/members/${convertedMemberId}`}
-        className="text-xs text-emerald-700 underline shrink-0"
+        className="text-xs font-semibold underline shrink-0"
+        style={{ color: "#10b981" }}
       >
         {t("leads.viewMember")}
       </Link>
     );
   }
 
+  const ghostBtn: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "7px 12px",
+    borderRadius: 9,
+    border: "1px solid var(--d-bdr)",
+    background: "var(--d-bg)",
+    color: "var(--d-tx2)",
+    cursor: "pointer",
+  };
+
   return (
     <div className="flex flex-wrap gap-1.5 shrink-0">
       <Link
         href={`/members/new?leadId=${leadId}`}
-        className="inline-flex items-center gap-1 text-xs bg-[var(--brand)] hover:bg-[var(--brand-strong)] text-white rounded-full px-3 py-1.5 font-medium"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          fontSize: 12,
+          fontWeight: 700,
+          padding: "7px 14px",
+          borderRadius: 9,
+          background: "#3b7bf6",
+          color: "#fff",
+          textDecoration: "none",
+          boxShadow: "0 2px 8px rgba(59,123,246,.3)",
+        }}
       >
         <UserPlus className="w-3 h-3" />
         {t("leads.createMember")}
@@ -43,7 +70,7 @@ export function LeadRowActions({
           type="button"
           onClick={() => start(() => setLeadStatus(leadId, "CONTACTED"))}
           disabled={pending}
-          className="inline-flex items-center gap-1 text-xs btn-ghost"
+          style={ghostBtn}
         >
           <Phone className="w-3 h-3" />
           {t("leads.markContacted")}
@@ -54,7 +81,7 @@ export function LeadRowActions({
           type="button"
           onClick={() => start(() => setLeadStatus(leadId, "LOST"))}
           disabled={pending}
-          className="inline-flex items-center gap-1 text-xs btn-ghost"
+          style={ghostBtn}
         >
           <X className="w-3 h-3" />
           {t("leads.markLost")}
@@ -64,7 +91,7 @@ export function LeadRowActions({
         type="button"
         onClick={() => start(() => deleteLead(leadId))}
         disabled={pending}
-        className="inline-flex items-center gap-1 text-xs text-red-600 hover:bg-red-50 rounded-full px-2 py-1.5"
+        style={{ ...ghostBtn, color: "#ef4444", padding: "7px 10px" }}
         title={t("common.delete")}
         aria-label={t("common.delete")}
       >
