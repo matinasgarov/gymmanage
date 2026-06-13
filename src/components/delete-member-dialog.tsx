@@ -31,10 +31,7 @@ export function DeleteMemberDialog({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-full text-sm font-medium"
-      >
+      <button onClick={() => setOpen(true)} className="md-btn-delete">
         <Trash2 className="w-3.5 h-3.5" />
         {t("deleteMember.button")}
       </button>

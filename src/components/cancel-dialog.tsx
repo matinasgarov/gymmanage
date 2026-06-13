@@ -14,10 +14,7 @@ export function CancelDialog({ memberId }: { memberId: string }) {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="px-4 py-2 border border-red-200 text-red-700 rounded-full text-sm hover:bg-red-50"
-      >
+      <button onClick={() => setOpen(true)} className="md-btn-cancel">
         {t("cancel.button")}
       </button>
 

@@ -91,6 +91,8 @@
     "confirmButton": "Həmişəlik sil"
   },
   "memberDetail": {
+    "membership": "Üzvlük",
+    "dangerHint": "Üzvlüyü ləğv etmək və ya üzvü silmək üçün buradan istifadə edin",
     "price": "Qiymət",
     "start": "Başlama",
     "notes": "Qeyd",

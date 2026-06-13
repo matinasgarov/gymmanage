@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Camera, Trash2 } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import {
   uploadMemberPhoto,
   removeMemberPhoto,
@@ -74,47 +74,55 @@ export function PhotoUpload({
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="w-20 h-20 rounded-full overflow-hidden bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center text-2xl font-semibold shrink-0">
+    <div className="md-avatar-wrap">
+      <div className="md-avatar">
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={previewUrl}
-            alt={memberName}
-            className="w-full h-full object-cover"
-          />
+          <img src={previewUrl} alt={memberName} />
         ) : (
           memberName.slice(0, 1).toUpperCase()
         )}
       </div>
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onPick}
-            disabled={pending}
-            className="btn-ghost inline-flex items-center gap-1.5"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            {previewUrl ? "Şəkli dəyiş" : "Şəkil əlavə et"}
-          </button>
-          {previewUrl && (
-            <button
-              type="button"
-              onClick={onRemove}
-              disabled={pending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 rounded-full text-sm hover:bg-red-50"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Sil
-            </button>
-          )}
+      <button
+        type="button"
+        onClick={onPick}
+        disabled={pending}
+        className="md-avatar-cam"
+        title={previewUrl ? "Şəkli dəyiş" : "Şəkil əlavə et"}
+      >
+        <Camera style={{ width: 11, height: 11 }} strokeWidth={2.5} />
+      </button>
+      {previewUrl && (
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={pending}
+          className="md-avatar-del"
+          title="Şəkli sil"
+        >
+          <X style={{ width: 11, height: 11 }} strokeWidth={2.8} />
+        </button>
+      )}
+      {error && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            whiteSpace: "nowrap",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#ef4444",
+            background: "#fff",
+            padding: "2px 6px",
+            borderRadius: 6,
+            boxShadow: "var(--d-sh1)",
+            zIndex: 5,
+          }}
+        >
+          {error}
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        <p className="text-[11px] text-[var(--muted)]">
-          Skan zamanı işçi üzü uyğunlaşdırması üçün istifadə olunur.
-        </p>
-      </div>
+      )}
       <input
         ref={fileInput}
         type="file"
