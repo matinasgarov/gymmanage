@@ -41,32 +41,60 @@ This sub-project delivers two tightly-linked features:
 
 ---
 
+## Separation of concerns — one home per metric
+
+Hard rule for this work: **no number is shown as a headline on more than one surface.**
+A surface may *link* to where a number lives, but it must not re-render the same figure
+as its own primary stat. The three surfaces own disjoint jobs:
+
+| Surface | Owns (its home metrics) | Tense / job |
+|---|---|---|
+| **Panel** (`/dashboard`) | Active members, today's check-ins (granted), month revenue total + 12-mo revenue chart + revenue-by-plan, churn, **alert counts** (overdue, expiring, new leads, at-risk) shown as *links to action* | **Now** — operational cockpit, drives action |
+| **Reminders** (`/reminders`) | The collection workspace: overdue / due-now / expiring **queue detail**, collect-today total, debt aging, reminded-but-unpaid | **Now** — the place you *do* collection |
+| **Recap** (`/recap`) | **Only attribution/protection**: money collected *after a reminder*, unauthorized entries *blocked*, possible-sharing signals, and the month-over-month trend of those | **Past** — value scorecard, makes $10 feel worth it |
+
+Consequences this spec follows:
+- The recap does **not** re-show total revenue, new-member count, active count, or
+  churn — those are the Panel's. (Total revenue appears on the recap *only* as the small
+  denominator of the "collected after a reminder" ratio, not as a stat of its own.)
+- The Panel's overdue/collect-today widgets stay **summaries that link** into the
+  Reminders workspace (their detailed home) — they don't gain duplicated queue detail.
+- The recap's check-in numbers are strictly the **denied/blocked** ones; the Panel's are
+  strictly the **granted** ones. No overlap.
+
+---
+
 ## Part A — "Ayın hesabatı" monthly recap
 
 ### Where it lives
 
-A new route `/recap` (nav label "Ayın hesabatı"), owner-only, plus a compact
-"this month" teaser card on the dashboard that links to it. A month selector lets the
-owner page back to previous months.
+A new route `/recap` (nav label "Ayın hesabatı"), owner-only. A month selector lets the
+owner page back to previous months. The dashboard gets a small **CTA link** to it
+("GymPass bu ay sənə nə qazandırdı? →") — a labelled entry point only, **not** a card
+that re-renders the recap's numbers (that would duplicate them per the rule above).
 
-### The lines (all computed live from existing data)
+### The lines — recap shows ONLY what nothing else shows
 
-The headline leads with **hard money first**, softer signals below, each labelled so
-nothing reads as inflated.
+To avoid showing the owner the same numbers two or three times (see *Separation of
+concerns* above), the recap is built **exclusively from attribution/protection metrics
+that the Panel and Reminders pages structurally cannot compute.** Raw state that
+already lives on the Panel (total revenue, active members, new members, churn) is **not
+re-rendered here**. The one shared figure that does appear — total revenue — appears
+*only as a denominator* for the attribution ratio, never as its own headline number.
 
-| Line | Source query | Honesty guardrail |
-|---|---|---|
-| **Yığılan ödəniş** (collected) | `Payment` where `status=PAID` and `paidAt` within the month; sum `amount`. Plus `VisitorPass.amount` for the month. | Hard money — real revenue recorded this month. Mirrors the dashboard's existing month-revenue math (reuse `toCents`/`centsToNumber`). |
-| **Xatırlatmadan sonra yığılan** (collected after a reminder) | Payments `PAID` this month where a `reminder.sent` `AuditLog` row exists for that payment id with `createdAt` **before** `paidAt` and within a **14-day** window. | The "GymPass caused this" line. Attribution is conservative: reminder must precede payment, within 14 days. |
-| **İcazəsiz giriş bloklandı** (unauthorized entries blocked) | `CheckIn` `result=DENIED` this month, where `deniedReason` is one of the debt/invalid-membership reasons (`PAYMENT`, `EXPIRED`, `CANCELLED`, `OVERDUE`). Shown as a **count**. Excludes `FROZEN` (paused, not a free-rider) and `limit_reached` (entry-cap enforcement, not revenue loss). | These are people who owed money or had no valid membership trying to train free. Counted, not valued in ₼, to stay unimpeachable. |
-| **Təkrar/eyni gün cəhd** (possible-sharing signals) | `CheckIn` `result=DENIED` with `deniedReason = already_entered`. Count, shown smaller. | Ambiguous (double-tap vs sharing) — kept as a soft secondary signal, never in the headline. |
-| **Yeni üzv** (new members) | `Member` created this month. | Context line. |
-| **Saxlanılan üzv** (members kept / not cancelled) | active-at-month-start minus cancelled-this-month (reuse dashboard churn inputs). | Context line. |
+| Line | Unique to recap? | Source query | Honesty guardrail |
+|---|---|---|---|
+| **Xatırlatmadan sonra yığılan** (collected after a reminder) — the headline | ✅ Yes — requires `reminder.sent` → `paidAt` attribution no other page does | Payments `PAID` this month where a `reminder.sent` `AuditLog` row exists for that payment id with `createdAt` **before** `paidAt`, within a **14-day** window | Conservative: reminder must precede payment, within 14 days |
+| **…of total {X}₼ collected** (ratio context) | Denominator only | Month revenue (reuse dashboard math) | Shown small, as the base of the ratio — NOT a standalone revenue card (that's the Panel's job) |
+| **İcazəsiz giriş bloklandı** (unauthorized entries blocked) — the second headline | ✅ Yes — Panel counts *granted* check-ins; nothing surfaces *denied* as protection | `CheckIn` `result=DENIED` this month where `deniedReason` ∈ {`PAYMENT`, `EXPIRED`, `CANCELLED`, `OVERDUE`}; shown as a **count**, optionally broken down by reason. Excludes `FROZEN` (paused) and `limit_reached` (cap enforcement). | Count only, never valued in ₼ |
+| **Təkrar/eyni gün cəhd** (possible-sharing signals) | ✅ Yes | `CheckIn` `result=DENIED` with `deniedReason = already_entered`. Count, shown smaller. | Ambiguous (double-tap vs sharing) — soft secondary signal, never headline |
+| **6- aylıq trend** (these two metrics over time) | ✅ Yes — Panel's chart is *total revenue*; this trends the *attribution* metrics | Per-month series of reminder-collected ₼ and blocked-entry count | Distinct from the Panel's revenue chart — different series entirely |
 
-**Headline composition:** "Bu ay: **{collected}₼ yığıldı** · {blockedCount} icazəsiz giriş
-bloklandı." The reminder-attributed figure is shown as a sub-line under collected
-("bundan {x}₼ xatırlatmadan sonra"), so the strongest claim is always the most
-defensible one.
+**Headline composition:** "Bu ay GymPass: **{reminderCollected}₼ yığdı** · **{blockedCount}
+giriş bloklandı**" — the two unique attribution numbers lead. The total-revenue
+denominator sits under the first as small text ("320₼ ödənişin {x}₼-i"). New members,
+churn, active count, and the revenue total/chart stay on the Panel and are **not**
+repeated here.
 
 ### Decisions locked (previously open)
 
@@ -82,7 +110,8 @@ defensible one.
   boundaries, `Promise.all` batching).
 - New `src/app/recap/page.tsx` (server component, `.dash` design) rendering the recap
   cards + month selector. Reuse the existing PageHeader / card visual system.
-- Dashboard teaser: a small card in `src/app/dashboard/page.tsx` linking to `/recap`.
+- Dashboard CTA: a labelled link in `src/app/dashboard/page.tsx` to `/recap` (no
+  numbers rendered on it — entry point only).
 - i18n keys under a new `recap.*` block in `az.json` + `ru.json` (kept in sync).
 
 ---
