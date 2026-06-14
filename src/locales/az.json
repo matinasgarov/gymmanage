@@ -203,6 +203,7 @@
     "attendance": "Davamiyyət",
     "leads": "Müraciətlər",
     "reminders": "Xatırlatmalar",
+    "recap": "Ayın hesabatı",
     "visitors": "Qonaqlar",
     "retention": "Geri qaytarma",
     "scan": "Skaner",
@@ -451,7 +452,25 @@
     "badgeOverdue": "Gecikmiş",
     "badgeDueNow": "Bu gün",
     "badgeExpiring": "Bitir",
-    "persons": "nəfər"
+    "persons": "nəfər",
+    "alreadyReminded": "Xatırladıldı"
+  },
+  "recap": {
+    "title": "Ayın hesabatı",
+    "subtitle": "GymPass bu ay sənə nə qazandırdı",
+    "reminderCollected": "Xatırlatmadan sonra yığılan",
+    "ofTotal": "{total}₼ ödənişin {amount}₼-i",
+    "blocked": "İcazəsiz giriş bloklandı",
+    "blockedEntries": "{count} giriş",
+    "sharingSignal": "Eyni gün təkrar cəhd",
+    "trendTitle": "Son 6 ay",
+    "reasonPayment": "Borc",
+    "reasonExpired": "Üzvlük bitib",
+    "reasonCancelled": "Ləğv edilib",
+    "prevMonth": "Əvvəlki ay",
+    "nextMonth": "Növbəti ay",
+    "empty": "Bu ay üçün məlumat yoxdur",
+    "ctaFromDashboard": "GymPass bu ay sənə nə qazandırdı? →"
   },
   "leads": {
     "title": "Müraciətlər",

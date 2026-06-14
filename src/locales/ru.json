@@ -220,6 +220,7 @@
     "attendance": "Посещаемость",
     "leads": "Заявки",
     "reminders": "Напоминания",
+    "recap": "Итоги месяца",
     "visitors": "Гости",
     "retention": "Возврат",
     "scan": "Сканер",
@@ -468,7 +469,25 @@
     "badgeOverdue": "Просрочено",
     "badgeDueNow": "Сегодня",
     "badgeExpiring": "Истекает",
-    "persons": "чел."
+    "persons": "чел.",
+    "alreadyReminded": "Напомнили"
+  },
+  "recap": {
+    "title": "Итоги месяца",
+    "subtitle": "Что GymPass принёс вам в этом месяце",
+    "reminderCollected": "Собрано после напоминания",
+    "ofTotal": "{amount}₼ из {total}₼",
+    "blocked": "Заблокировано входов без оплаты",
+    "blockedEntries": "{count} входов",
+    "sharingSignal": "Повторная попытка в тот же день",
+    "trendTitle": "Последние 6 месяцев",
+    "reasonPayment": "Долг",
+    "reasonExpired": "Членство истекло",
+    "reasonCancelled": "Отменено",
+    "prevMonth": "Предыдущий месяц",
+    "nextMonth": "Следующий месяц",
+    "empty": "Нет данных за этот месяц",
+    "ctaFromDashboard": "Что GymPass принёс вам в этом месяце? →"
   },
   "leads": {
     "title": "Заявки",
