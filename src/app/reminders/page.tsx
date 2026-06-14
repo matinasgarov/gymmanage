@@ -6,6 +6,7 @@ import { getT } from "@/lib/i18n-server";
 import { ReminderQueue, type ReminderItem } from "@/components/reminder-queue";
 import { OVERDUE_GRACE_DAYS } from "@/lib/payments";
 import { centsToNumber, sumCents } from "@/lib/money";
+import { remindedPaymentIds } from "@/lib/reminder-status";
 
 export default async function RemindersPage() {
   const { user, db } = await getOwnerDb();
@@ -44,6 +45,16 @@ export default async function RemindersPage() {
       member: p.member,
     };
   });
+
+  // Flag payments that already had a reminder sent, so an owner can see what hasn't
+  // been chased yet and nothing slips through.
+  const reminded = await remindedPaymentIds(
+    user.gymId,
+    paymentItems.map((i) => i.paymentId).filter((id): id is string => Boolean(id))
+  );
+  for (const item of paymentItems) {
+    item.alreadyReminded = item.paymentId ? reminded.has(item.paymentId) : false;
+  }
 
   // Group 3: expiring within 7 days with no open debt (debtors are in groups 1–2).
   const debtorIds = [...new Set(withMember.map((p) => p.member.id))];
