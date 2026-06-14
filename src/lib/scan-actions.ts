@@ -7,6 +7,7 @@ import { parseScanToken, verifyScanToken } from "@/lib/qr";
 import { ensurePendingPayments, computeDebt, periodsThrough, type DebtSummary } from "@/lib/payments";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n";
 import { verifyVisitorPassScan } from "@/lib/visitor-actions";
+import { REASON } from "@/lib/scan-reasons";
 
 export type ScanResult =
   | {
@@ -33,20 +34,6 @@ export type ScanResult =
       };
       canOverride?: boolean;
     };
-
-const REASON: Record<string, string> = {
-  format: "QR kodu yanlışdır",
-  expired: "QR kodu vaxtı keçib — yenilənməsini gözləyin",
-  invalid: "QR kodu etibarsızdır",
-  wrong_gym: "Bu zalın üzvü deyil",
-  not_found: "Üzv tapılmadı",
-  FROZEN: "Üzvlük dondurulub",
-  EXPIRED: "Üzvlük başa çatıb",
-  CANCELLED: "Üzvlük ləğv edilib",
-  PAYMENT: "Ödəniş gözlənilir",
-  already_entered: "Bu gün artıq giriş edilib",
-  limit_reached: "Aylıq giriş limiti dolub",
-};
 
 // Whether a capped member has used up their per-cycle entries. The cycle is the
 // member's current billing period (latest period start from their startDate).
