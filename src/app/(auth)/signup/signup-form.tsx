@@ -11,7 +11,7 @@ export function SignupForm() {
   const [state, action, pending] = useActionState(signup, initial);
 
   return (
-    <form action={action} className="space-y-4 bg-white p-6 rounded-lg shadow-sm border">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Field
         label={t("settings.gymName")}
         name="gymName"
@@ -45,8 +45,13 @@ export function SignupForm() {
         placeholder={t("auth.signupPasswordPlaceholder")}
         errors={state?.errors?.password}
       />
-      {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
-      <button type="submit" disabled={pending} className="btn-brand w-full">
+      {state?.message && <p style={{ fontSize: 13, color: "#ef4444" }}>{state.message}</p>}
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-primary"
+        style={{ width: "100%", justifyContent: "center", height: 44, marginTop: 2, opacity: pending ? 0.6 : 1 }}
+      >
         {pending ? t("auth.signupCreating") : t("auth.signupSubmit")}
       </button>
     </form>
@@ -62,7 +67,10 @@ function Field(props: {
 }) {
   return (
     <div>
-      <label htmlFor={props.name} className="block text-sm font-medium mb-1">
+      <label
+        htmlFor={props.name}
+        style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: "var(--d-tx2)", marginBottom: 6 }}
+      >
         {props.label}
       </label>
       <input
@@ -70,10 +78,11 @@ function Field(props: {
         name={props.name}
         type={props.type ?? "text"}
         placeholder={props.placeholder}
-        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/20"
+        className="md-input"
+        style={{ height: 42 }}
       />
       {props.errors?.length ? (
-        <p className="text-xs text-red-600 mt-1">{props.errors[0]}</p>
+        <p style={{ fontSize: 11.5, color: "#ef4444", marginTop: 5 }}>{props.errors[0]}</p>
       ) : null}
     </div>
   );

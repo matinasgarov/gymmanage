@@ -7,14 +7,27 @@ import { useT } from "@/components/i18n-provider";
 
 const initial: FormState = undefined;
 
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 12.5,
+  fontWeight: 700,
+  color: "var(--d-tx2)",
+  marginBottom: 6,
+};
+const errorStyle: React.CSSProperties = {
+  fontSize: 11.5,
+  color: "#ef4444",
+  marginTop: 5,
+};
+
 export function LoginForm() {
   const t = useT();
   const [state, action, pending] = useActionState(login, initial);
 
   return (
-    <form action={action} className="space-y-4 bg-white p-6 rounded-lg shadow-sm border">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-1">
+        <label htmlFor="email" style={labelStyle}>
           Email
         </label>
         <input
@@ -22,33 +35,36 @@ export function LoginForm() {
           name="email"
           type="email"
           placeholder="siz@example.com"
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/20"
+          className="md-input"
+          style={{ height: 42 }}
         />
-        {state?.errors?.email?.[0] && (
-          <p className="text-xs text-red-600 mt-1">{state.errors.email[0]}</p>
-        )}
+        {state?.errors?.email?.[0] && <p style={errorStyle}>{state.errors.email[0]}</p>}
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium mb-1">
+        <label htmlFor="password" style={labelStyle}>
           {t("auth.loginPassword")}
         </label>
         <input
           id="password"
           name="password"
           type="password"
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/20"
+          className="md-input"
+          style={{ height: 42 }}
         />
-        {state?.errors?.password?.[0] && (
-          <p className="text-xs text-red-600 mt-1">{state.errors.password[0]}</p>
-        )}
+        {state?.errors?.password?.[0] && <p style={errorStyle}>{state.errors.password[0]}</p>}
       </div>
-      <div className="text-right -mt-2">
-        <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">
+      <div style={{ textAlign: "right", marginTop: -6 }}>
+        <Link href="/forgot-password" style={{ fontSize: 12, color: "#3b7bf6", fontWeight: 600, textDecoration: "none" }}>
           {t("auth.loginForgot")}
         </Link>
       </div>
-      {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
-      <button type="submit" disabled={pending} className="btn-brand w-full">
+      {state?.message && <p style={{ fontSize: 13, color: "#ef4444" }}>{state.message}</p>}
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-primary"
+        style={{ width: "100%", justifyContent: "center", height: 44, opacity: pending ? 0.6 : 1 }}
+      >
         {pending ? t("auth.loginChecking") : t("auth.loginSubmit")}
       </button>
     </form>
