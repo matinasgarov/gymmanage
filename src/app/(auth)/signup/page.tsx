@@ -1,22 +1,25 @@
 import Link from "next/link";
 import { getT } from "@/lib/i18n-server";
+import { AuthShell } from "@/components/auth-shell";
 import { SignupForm } from "./signup-form";
 
 export default async function SignupPage() {
   const t = await getT();
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-neutral-50">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-semibold mb-1">{t("auth.signupTitle")}</h1>
-        <p className="text-sm text-neutral-600 mb-6">{t("auth.signupSubtitle")}</p>
-        <SignupForm />
-        <p className="text-sm text-neutral-600 mt-4 text-center">
-          {t("auth.signupHaveAccount")}{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            {t("auth.signupLogin")}
-          </Link>
-        </p>
-      </div>
-    </main>
+    <AuthShell>
+      <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px", color: "var(--d-tx)" }}>
+        {t("auth.signupTitle")}
+      </h1>
+      <p style={{ fontSize: 13, color: "var(--d-tx3)", marginTop: 4, marginBottom: 24 }}>
+        {t("auth.signupSubtitle")}
+      </p>
+      <SignupForm />
+      <p style={{ fontSize: 13, color: "var(--d-tx3)", marginTop: 20, textAlign: "center" }}>
+        {t("auth.signupHaveAccount")}{" "}
+        <Link href="/login" style={{ color: "#3b7bf6", fontWeight: 700, textDecoration: "none" }}>
+          {t("auth.signupLogin")}
+        </Link>
+      </p>
+    </AuthShell>
   );
 }
