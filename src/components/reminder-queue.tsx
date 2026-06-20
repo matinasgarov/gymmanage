@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { recordReminderSent } from "@/lib/reminder-actions";
-import { buildWaUrl, pickTemplate, renderTemplate } from "@/lib/templates";
+import { buildWaUrl, pickReminderTemplate, pickTemplate, renderTemplate } from "@/lib/templates";
 import { useT } from "@/components/i18n-provider";
 
 export type ReminderItem = {
@@ -22,6 +22,7 @@ export type ReminderItem = {
   daysLate?: number;
   daysLeft?: number;
   expiryDate?: string;
+  alreadyReminded?: boolean;
   member: { id: string; name: string; phone: string; publicId: string };
 };
 
@@ -128,7 +129,7 @@ export function ReminderQueue({
       });
       return buildWaUrl(item.member.phone, msg);
     }
-    const tmpl = pickTemplate("reminder", reminderTemplate);
+    const tmpl = pickReminderTemplate(item.daysLate ?? 0, reminderTemplate);
     const msg = renderTemplate(tmpl, {
       memberName: item.member.name,
       gymName,
@@ -240,6 +241,13 @@ export function ReminderQueue({
                             {detail}
                           </div>
                         </div>
+
+                        {/* Already-reminded marker — so an owner sees what was chased */}
+                        {item.alreadyReminded && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "var(--d-bg)", color: "var(--d-tx3)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                            {t("reminders.alreadyReminded")}
+                          </span>
+                        )}
 
                         {/* Badge */}
                         <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 6, whiteSpace: "nowrap", flexShrink: 0, background: badge.bg, color: badge.color }}>

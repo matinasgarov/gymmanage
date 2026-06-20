@@ -18,6 +18,7 @@ import {
   UserCheck,
   Activity,
   HeartPulse,
+  Sparkles,
 } from "lucide-react";
 import { logout } from "@/lib/auth-actions";
 import { useT } from "@/components/i18n-provider";
@@ -63,6 +64,7 @@ const ITEMS: NavItem[] = [
     ownerOnly: true,
   },
   { href: "/reminders", labelKey: "nav.reminders", icon: Megaphone, ownerOnly: true },
+  { href: "/recap", labelKey: "nav.recap", icon: Sparkles, ownerOnly: true },
   {
     href: "/retention",
     labelKey: "nav.retention",
