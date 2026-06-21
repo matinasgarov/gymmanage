@@ -15,20 +15,20 @@ export function ProfileForm({
   const [state, action, pending] = useActionState(updateGymProfile, initial);
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Field label={t("settings.gymName")} name="name" defaultValue={defaults.name} errors={state?.errors?.name} />
       <Field label={t("settings.ownerName")} name="ownerName" defaultValue={defaults.ownerName} errors={state?.errors?.ownerName} />
       <Field label={t("memberForm.phone")} name="phone" type="tel" defaultValue={defaults.phone} errors={state?.errors?.phone} />
       <Field label={t("settings.address")} name="address" defaultValue={defaults.address} errors={state?.errors?.address} />
-      <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending} className="btn-brand">
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
+        <button type="submit" disabled={pending} className="btn-primary" style={{ opacity: pending ? 0.5 : 1 }}>
           {pending ? t("common.saving") : t("settings.saveProfile")}
         </button>
         {state?.ok && state.message && (
-          <span className="text-xs text-emerald-700">{state.message}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#10b981" }}>{state.message}</span>
         )}
         {!state?.ok && state?.message && (
-          <span className="text-xs text-red-600">{state.message}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#ef4444" }}>{state.message}</span>
         )}
       </div>
     </form>
@@ -43,8 +43,8 @@ function Field(props: {
   errors?: string[];
 }) {
   return (
-    <div>
-      <label htmlFor={props.name} className="block text-sm font-medium mb-1">
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label htmlFor={props.name} className="md-field-label">
         {props.label}
       </label>
       <input
@@ -52,10 +52,10 @@ function Field(props: {
         name={props.name}
         type={props.type ?? "text"}
         defaultValue={props.defaultValue}
-        className="w-full px-3 py-2 border border-[var(--border)] rounded-md"
+        className="md-input"
       />
       {props.errors?.[0] && (
-        <p className="text-xs text-red-600 mt-1">{props.errors[0]}</p>
+        <p style={{ fontSize: 11.5, fontWeight: 600, color: "#ef4444" }}>{props.errors[0]}</p>
       )}
     </div>
   );

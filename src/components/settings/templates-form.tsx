@@ -26,10 +26,10 @@ export function TemplatesForm({ defaults }: { defaults: Record<string, string> }
   const [state, action, pending] = useActionState(updateGymTemplates, initial);
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {FIELDS.map((f) => (
-        <div key={f.key}>
-          <label htmlFor={f.name} className="block text-sm font-medium mb-1">
+        <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label htmlFor={f.name} className="md-field-label">
             {t(LABEL_KEY[f.key])}
           </label>
           <textarea
@@ -38,22 +38,23 @@ export function TemplatesForm({ defaults }: { defaults: Record<string, string> }
             rows={3}
             defaultValue={defaults[f.name]}
             placeholder={DEFAULT_TEMPLATES[f.key]}
-            className="w-full px-3 py-2 border border-[var(--border)] rounded-md text-sm"
+            className="md-input"
+            style={{ height: "auto", minHeight: 72, padding: "10px 12px", lineHeight: 1.5, resize: "vertical" }}
           />
-          <p className="text-[11px] text-[var(--muted)] mt-1">
+          <p style={{ fontSize: 11, fontWeight: 500, color: "var(--d-tx3)" }}>
             {t("settings.templatePlaceholders")} {TEMPLATE_PLACEHOLDERS[f.key].join(", ")}
           </p>
         </div>
       ))}
-      <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending} className="btn-brand">
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button type="submit" disabled={pending} className="btn-primary" style={{ opacity: pending ? 0.5 : 1 }}>
           {pending ? t("common.saving") : t("settings.saveTemplates")}
         </button>
         {state?.ok && state.message && (
-          <span className="text-xs text-emerald-700">{state.message}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#10b981" }}>{state.message}</span>
         )}
         {!state?.ok && state?.message && (
-          <span className="text-xs text-red-600">{state.message}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#ef4444" }}>{state.message}</span>
         )}
       </div>
     </form>

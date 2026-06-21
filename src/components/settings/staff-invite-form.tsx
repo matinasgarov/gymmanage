@@ -11,24 +11,24 @@ export function StaffInviteForm() {
   const [state, action, pending] = useActionState(inviteStaff, initial);
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor="staff-name" className="mb-1 block text-xs text-[var(--muted)]">
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label htmlFor="staff-name" className="md-field-label">
             {t("settings.staffInviteName")}
           </label>
           <input
             id="staff-name"
             name="name"
             placeholder={t("settings.staffInviteNamePlaceholder")}
-            className="w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
+            className="md-input"
           />
           {state?.errors?.name?.[0] && (
-            <p className="mt-1 text-xs text-red-600">{state.errors.name[0]}</p>
+            <p style={{ fontSize: 11.5, fontWeight: 600, color: "#ef4444" }}>{state.errors.name[0]}</p>
           )}
         </div>
-        <div>
-          <label htmlFor="staff-email" className="mb-1 block text-xs text-[var(--muted)]">
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label htmlFor="staff-email" className="md-field-label">
             Email
           </label>
           <input
@@ -36,24 +36,25 @@ export function StaffInviteForm() {
             name="email"
             type="email"
             placeholder="email@example.com"
-            className="w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
+            className="md-input"
           />
           {state?.errors?.email?.[0] && (
-            <p className="mt-1 text-xs text-red-600">{state.errors.email[0]}</p>
+            <p style={{ fontSize: 11.5, fontWeight: 600, color: "#ef4444" }}>{state.errors.email[0]}</p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
           type="submit"
           disabled={pending}
-          className="shrink-0 whitespace-nowrap rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="btn-primary"
+          style={{ opacity: pending ? 0.5 : 1 }}
         >
           {pending ? t("settings.staffInviteSending") : t("settings.staffInviteSubmit")}
         </button>
         {state?.message && (
-          <p className="text-xs text-emerald-700">{state.message}</p>
+          <p style={{ fontSize: 12.5, fontWeight: 600, color: "#10b981" }}>{state.message}</p>
         )}
       </div>
     </form>

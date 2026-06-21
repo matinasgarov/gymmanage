@@ -22,11 +22,11 @@ export async function StaffCard({ gymId }: { gymId: string }) {
   });
 
   return (
-    <div className="space-y-5">
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {staff.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">{t("settings.staffNoStaff")}</p>
+        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--d-tx3)" }}>{t("settings.staffNoStaff")}</p>
       ) : (
-        <ul className="space-y-2">
+        <ul style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {staff.map((s) => {
             const pending = !s.active && s.passwordHash === "";
             const statusLabel = s.active
@@ -34,29 +34,37 @@ export async function StaffCard({ gymId }: { gymId: string }) {
               : pending
                 ? t("settings.staffPending")
                 : t("settings.staffInactive");
+            const badgeCls = s.active ? "md-s-active" : pending ? "md-s-overdue" : "md-s-cancelled";
             return (
               <li
                 key={s.id}
-                className="flex items-center gap-3 rounded-lg border border-[var(--border)] px-3 py-2.5"
+                className="flex items-center gap-3"
+                style={{
+                  border: "1px solid var(--d-bdr)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  background: "var(--d-bg)",
+                }}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand)]/10 text-xs font-semibold text-[var(--brand-strong)]">
+                <div
+                  className="flex shrink-0 items-center justify-center"
+                  style={{
+                    height: 36,
+                    width: 36,
+                    borderRadius: "50%",
+                    background: "rgba(59,123,246,.12)",
+                    color: "#3b7bf6",
+                    fontSize: 13,
+                    fontWeight: 800,
+                  }}
+                >
                   {initials(s.name) || "?"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{s.name}</div>
-                  <div className="truncate text-xs text-[var(--muted)]">{s.email}</div>
+                  <div className="truncate" style={{ fontSize: 13.5, fontWeight: 700, color: "var(--d-tx)" }}>{s.name}</div>
+                  <div className="truncate" style={{ fontSize: 11.5, fontWeight: 500, color: "var(--d-tx3)" }}>{s.email}</div>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                    s.active
-                      ? "bg-emerald-100 text-emerald-700"
-                      : pending
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-neutral-200 text-neutral-600"
-                  }`}
-                >
-                  {statusLabel}
-                </span>
+                <span className={`md-badge ${badgeCls} shrink-0`}>{statusLabel}</span>
                 <div className="flex shrink-0 items-center gap-3">
                   {!pending && <StaffToggleButton staffId={s.id} active={s.active} />}
                   <StaffDeleteDialog staffId={s.id} staffName={s.name} />
@@ -67,8 +75,8 @@ export async function StaffCard({ gymId }: { gymId: string }) {
         </ul>
       )}
 
-      <div className="border-t border-[var(--border)] pt-4">
-        <h3 className="mb-2 text-sm font-medium">{t("settings.staffAddTitle")}</h3>
+      <div style={{ borderTop: "1px solid var(--d-bdr)", paddingTop: 16 }}>
+        <h3 style={{ marginBottom: 12, fontSize: 13, fontWeight: 800, color: "var(--d-tx)" }}>{t("settings.staffAddTitle")}</h3>
         <StaffInviteForm />
       </div>
     </div>

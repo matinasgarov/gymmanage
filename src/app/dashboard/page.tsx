@@ -64,11 +64,6 @@ export default async function DashboardPage() {
       </div>
       <div className="dash min-h-full px-6 py-6 space-y-[18px]">
 
-        {/* Monthly recap entry point — labelled link only, no numbers duplicated here */}
-        <Link href="/recap" className="md-edit-btn" style={{ alignSelf: "flex-start" }}>
-          {t("recap.ctaFromDashboard")}
-        </Link>
-
         {/* ── Alert pills ─────────────────────────────────── */}
         {(data.newLeadsCount > 0 || atRiskCount > 0 || data.collect.people > 0) && (
           <div className="flex flex-wrap gap-2">

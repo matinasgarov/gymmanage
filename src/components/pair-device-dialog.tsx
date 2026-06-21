@@ -79,7 +79,7 @@ export function PairDeviceDialog({ origin }: { origin: string }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn-brand">
+      <button onClick={() => setOpen(true)} className="btn-primary">
         {t("settings.devicesAdd")}
       </button>
     );

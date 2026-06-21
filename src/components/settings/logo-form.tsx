@@ -70,7 +70,18 @@ export function LogoForm({
 
   return (
     <div className="flex items-center gap-4">
-      <div className="w-20 h-20 rounded-xl overflow-hidden bg-[var(--brand-soft)] text-[var(--brand-strong)] flex items-center justify-center text-2xl font-semibold shrink-0">
+      <div
+        className="shrink-0 flex items-center justify-center overflow-hidden"
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 16,
+          background: "rgba(59,123,246,.12)",
+          color: "#3b7bf6",
+          fontSize: 26,
+          fontWeight: 800,
+        }}
+      >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt={gymName} className="w-full h-full object-cover" />
@@ -78,13 +89,14 @@ export function LogoForm({
           gymName.slice(0, 1).toUpperCase()
         )}
       </div>
-      <div className="space-y-1.5">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
             disabled={pending}
-            className="btn-ghost inline-flex items-center gap-1.5"
+            className="md-edit-btn"
+            style={{ opacity: pending ? 0.5 : 1 }}
           >
             <Camera className="w-3.5 h-3.5" />
             {preview ? t("settings.logoChange") : t("settings.logoAdd")}
@@ -94,15 +106,16 @@ export function LogoForm({
               type="button"
               onClick={onRemove}
               disabled={pending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 rounded-full text-sm hover:bg-red-50"
+              className="md-btn-delete"
+              style={{ width: "auto", padding: "0 14px", opacity: pending ? 0.5 : 1 }}
             >
               <Trash2 className="w-3.5 h-3.5" />
               {t("common.delete")}
             </button>
           )}
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        <p className="text-[11px] text-[var(--muted)]">{t("settings.logoHint")}</p>
+        {error && <p style={{ fontSize: 12, fontWeight: 600, color: "#ef4444" }}>{error}</p>}
+        <p style={{ fontSize: 11, fontWeight: 500, color: "var(--d-tx3)" }}>{t("settings.logoHint")}</p>
       </div>
       <input
         ref={fileInput}
