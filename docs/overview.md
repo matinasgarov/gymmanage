@@ -82,12 +82,43 @@ WhatsApp them.
 Revenue summary for the current month (members + visitors), per-plan breakdown,
 revenue-vs-goal bar, today's check-ins, members expiring soon, overdue payments.
 
+### Monthly recap
+`/recap` (owner-only) is the "what GymPass earned you" report. It shows only the
+attribution metrics nothing else surfaces — reminder-collected revenue and blocked
+access entries for a given month — plus a 6-month trend, with a month pager. By
+design it does **not** repeat the Panel's live totals or the Reminders queue; one
+home per metric. Reachable from the "Ayın hesabatı" sidebar item.
+
 ### Audit log
 Append-only. Every payment mutation, status change, QR transfer, scan override,
 and invite writes a row. Queryable at `/audit` by owner.
 
 ### Staff role
 STAFF users see only the Skaner page. All management pages are owner-only.
+
+### Authentication & security
+- **Signup is email-verified.** The signup form does not create an account — it
+  stores a `PendingSignup` row and emails a 6-digit code; the Gym + Owner are only
+  created once the code is verified (`/signup/verify`). This prevents registering
+  on an email you don't control and avoids junk/squatted accounts.
+- **Login + opt-in 2FA.** Email + password (bcrypt). Each user can enable email-OTP
+  two-factor in Settings; once on, login emails a code and defers the session until
+  it's verified (`/login/verify`). Codes are sha256-hashed, single-use, 10-min TTL,
+  5-attempt cap. Disabling 2FA re-checks the password.
+- **Rate limiting.** A DB-backed fixed-window limiter (`src/lib/rate-limit.ts`,
+  `RateLimit` table) throttles login (per email + per IP), password reset, signup,
+  and all OTP verify/resend paths.
+- **Sessions** are a signed JWT (HS256, `jose`) in an httpOnly, `sameSite=lax`,
+  `secure`-in-prod cookie — never `localStorage`. `getCurrentUser()` re-checks the
+  user's `active` flag on every request, so deactivating staff kills their live
+  session immediately. Authorization is enforced server-side in the DAL on every
+  request (`requireOwner`/`getOwnerDb`); the sidebar's role filtering is UI only.
+- Out-of-band links (password reset, staff invite) derive their origin from
+  server config (`NEXTAUTH_URL`), never the request Host header.
+
+> **Email delivery:** codes/links go out via Resend. With `RESEND_API_KEY` unset
+> (local dev) sends are skipped and logged to the server console — read the code
+> from the log to test. Production needs `RESEND_API_KEY` + a verified `RESEND_FROM`.
 
 ---
 
@@ -111,8 +142,10 @@ Conventions:
   (Node's ICU lacks full `az` locale data).
 
 Applied to: dashboard, members, payments, attendance, audit, reminders, retention,
-leads, visitors, and the scanner. The scanner (`/scan`) uses a navy viewfinder card
-with an animated scan line and a live status chip over the `html5-qrcode` camera feed.
+leads, visitors, recap, settings, the auth pages (login/signup + verify steps), and
+the scanner. The scanner (`/scan`) uses a navy viewfinder card with an animated scan
+line and a live status chip over the `html5-qrcode` camera feed. Auth pages use a
+split-screen `AuthShell` (brand image left, form right).
 
 ---
 
@@ -124,7 +157,8 @@ with an animated scan line and a live status chip over the `html5-qrcode` camera
 | Language | TypeScript / React 19 |
 | Styling | Tailwind CSS v4 + `.dash` design-token system (see UI section) |
 | ORM | Prisma 6 → PostgreSQL |
-| Auth | Session cookie (httpOnly, SHA-256 password hashing) |
+| Auth | bcrypt passwords, HS256 JWT session cookie (`jose`), opt-in email-OTP 2FA, email-verified signup, DB rate limiting |
+| Email | Resend (`RESEND_API_KEY` / `RESEND_FROM`) |
 | QR encoding | `qrcode.react` (client), HMAC-SHA256 (server) |
 | Image storage | Local `/public/uploads/` (member photos) |
 
@@ -143,8 +177,12 @@ at the database layer — isolation is enforced in application code.
 | Path | Purpose |
 |---|---|
 | `prisma/schema.prisma` | Full data model |
-| `src/lib/dal.ts` | `getCurrentUser()` — session → User + Gym |
+| `src/lib/dal.ts` | `getCurrentUser()` / `requireOwner()` — session → User + Gym, role gating |
 | `src/lib/tenant.ts` | `forGym()` — scoped Prisma client |
+| `src/lib/auth-actions.ts` | signup/login/2FA/reset/invite server actions |
+| `src/lib/session.ts` | JWT session + pending-2FA / pending-signup cookies |
+| `src/lib/two-factor.ts` | email-OTP issue/verify |
+| `src/lib/rate-limit.ts` | DB fixed-window limiter + client IP |
 | `src/lib/qr.ts` | Token signing / verification / hashing |
 | `src/lib/qr-actions.ts` | `requestScanToken`, `transferPassDevice` |
 | `src/lib/scan-actions.ts` | `verifyScan`, `verifyVisitorPassScan` |
