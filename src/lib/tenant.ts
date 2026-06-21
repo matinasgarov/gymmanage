@@ -21,11 +21,16 @@ const TENANT_MODELS = new Set<string>([
 //            so injecting one would be an "Unknown argument" error)
 //  - PasswordResetToken: scoped transitively through its `user` (no `gymId`
 //            column); only ever read/written via the raw client in auth flows.
+//  - TwoFactorCode: scoped transitively through its `user`; auth-flow only.
+//  - RateLimit: global (keyed by action+identity, e.g. IP/email); not a tenant.
 const NON_TENANT_MODELS = new Set<string>([
   "Gym",
   "User",
   "Freeze",
   "PasswordResetToken",
+  "TwoFactorCode",
+  "RateLimit",
+  "PendingSignup",
 ]);
 
 // Completeness guard (fail-closed): every model in the schema must be consciously

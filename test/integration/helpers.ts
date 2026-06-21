@@ -26,6 +26,9 @@ const TABLES = [
   "ScannerDevice",
   "PlanPrice",
   "PasswordResetToken",
+  "TwoFactorCode",
+  "RateLimit",
+  "PendingSignup",
 ];
 
 export async function resetDb() {

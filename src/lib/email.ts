@@ -51,6 +51,26 @@ export async function sendInviteEmail(to: string, name: string, inviteUrl: strin
   );
 }
 
+export async function sendSignupCode(to: string, code: string) {
+  await send(
+    to,
+    "GymPass — emailinizi təsdiqləyin",
+    `<p>GymPass hesabınızı yaratmaq üçün təsdiq kodunuz:</p>
+     <p style="font-size:28px;font-weight:bold;letter-spacing:4px;">${esc(code)}</p>
+     <p>Kod 30 dəqiqə etibarlıdır. Bu sorğunu siz etməmisinizsə, bu emaili nəzərə almayın.</p>`
+  );
+}
+
+export async function sendTwoFactorCode(to: string, code: string) {
+  await send(
+    to,
+    "GymPass — təsdiq kodu",
+    `<p>GymPass-a daxil olmaq üçün təsdiq kodunuz:</p>
+     <p style="font-size:28px;font-weight:bold;letter-spacing:4px;">${esc(code)}</p>
+     <p>Kod 10 dəqiqə etibarlıdır. Bu sorğunu siz etməmisinizsə, şifrənizi dəyişin.</p>`
+  );
+}
+
 export async function sendResetEmail(to: string, resetUrl: string) {
   await send(
     to,

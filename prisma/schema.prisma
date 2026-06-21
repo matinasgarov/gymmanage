@@ -71,6 +71,11 @@ enum TokenKind {
   INVITE
 }
 
+enum TwoFactorPurpose {
+  LOGIN
+  ENABLE
+}
+
 // ─── Tenant root ─────────────────────────────────────────────────────
 
 model Gym {
@@ -205,6 +210,9 @@ model User {
   name         String
   role         UserRole @default(STAFF)
   active       Boolean  @default(true)
+  // Opt-in email-OTP two-factor. When true, login requires a 6-digit code
+  // emailed to `email` after the password step.
+  twoFactorEnabled Boolean @default(false)
   // UI language preference ("az" | "ru"). null = fall back to cookie / gym locale.
   locale       String?
   createdAt    DateTime @default(now())
@@ -216,8 +224,37 @@ model User {
   auditsActed           AuditLog[]           @relation("AuditActor")
   visitorPassesRecorded VisitorPass[]        @relation("VisitorPassRecordedBy")
   resetTokens           PasswordResetToken[]
+  twoFactorCodes        TwoFactorCode[]
 
   @@index([gymId])
+}
+
+// Short-lived email-OTP codes for two-factor login and 2FA enrollment.
+// Only the sha256 hash of the 6-digit code is stored; the raw code lives only
+// in the email. `attempts` caps brute force; `consumedAt` makes a code single-use.
+model TwoFactorCode {
+  id         String           @id @default(cuid())
+  userId     String
+  codeHash   String
+  purpose    TwoFactorPurpose
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int              @default(0)
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Rate limiting (fixed-window counter, keyed per action+identity) ──
+// One row per limiter key (e.g. "login:email:x" / "login:ip:1.2.3.4").
+// `windowStart` rolls over once the window elapses; `count` resets to 1.
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model PasswordResetToken {
@@ -232,6 +269,23 @@ model PasswordResetToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// A signup awaiting email verification. The real Gym/User rows are NOT created
+// until the emailed code is confirmed — so an attacker cannot register an
+// account on an email they don't control, nor squat someone else's address.
+// One pending row per email; re-requesting overwrites it. Cleared on success.
+model PendingSignup {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  gymName      String
+  ownerName    String
+  phone        String
+  passwordHash String
+  codeHash     String
+  expiresAt    DateTime
+  attempts     Int      @default(0)
+  createdAt    DateTime @default(now())
 }
 
 // ─── Members ─────────────────────────────────────────────────────────

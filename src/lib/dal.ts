@@ -21,6 +21,7 @@ export const getCurrentUser = cache(async () => {
       name: true,
       role: true,
       active: true,
+      twoFactorEnabled: true,
       gymId: true,
       gym: {
         select: {
